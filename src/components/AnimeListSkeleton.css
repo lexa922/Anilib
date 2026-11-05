@@ -1,0 +1,99 @@
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(
+        90deg,
+        var(--skeleton-base) 25%,
+        var(--skeleton-highlight) 50%,
+        var(--skeleton-base) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.6s infinite ease-in-out;
+}
+
+.Anime-card-skeleton {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    width: 100%;
+    padding: 0.85em;
+    background-color: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+}
+
+.skeleton-poster {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+}
+
+.skeleton-title-1 {
+    width: 85%;
+    height: 14px;
+    border-radius: 4px;
+    margin-bottom: 0.4rem;
+}
+
+.skeleton-title-2 {
+    width: 55%;
+    height: 14px;
+    border-radius: 4px;
+    margin-bottom: 0.8rem;
+}
+
+.skeleton-meta {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
+}
+
+.skeleton-badge-score {
+    height: 20px;
+    width: 52px;
+    border-radius: 4px;
+}
+
+.skeleton-badge-year {
+    height: 20px;
+    width: 44px;
+    border-radius: 4px;
+}
+
+.skeleton-label {
+    width: 45px;
+    height: 12px;
+    border-radius: 3px;
+    margin-bottom: 0.45rem;
+}
+
+.skeleton-genres {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.skeleton-genre-1 {
+    height: 18px;
+    width: 50px;
+    border-radius: 4px;
+}
+
+.skeleton-genre-2 {
+    height: 18px;
+    width: 65px;
+    border-radius: 4px;
+}
+
+.skeleton-genre-3 {
+    height: 18px;
+    width: 40px;
+    border-radius: 4px;
+}

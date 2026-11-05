@@ -1,0 +1,56 @@
+.dashboard-skeleton {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.kpi-section-skeleton {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+}
+
+.kpi-card-skeleton {
+    flex: 1;
+    min-width: 15rem;
+    height: 72px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.dashboard-main-skeleton {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.anime-section-skeleton {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.results-header-skeleton {
+    height: 44px;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.filter-sidebar-skeleton {
+    width: 20rem;
+    max-width: 30%;
+    height: 420px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface);
+    flex-shrink: 0;
+}
