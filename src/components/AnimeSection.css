@@ -1,0 +1,348 @@
+.Anime-section {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0;
+    align-items: flex-start;
+}
+
+.Anime-list-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    align-items: center;
+    transition: opacity 0.2s ease;
+    min-width: 0;
+}
+
+.Anime-results-header {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.65rem 1.1rem;
+    margin-bottom: 0.85rem;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.Anime-results-header strong {
+    color: var(--accent-color);
+}
+
+.Anime-reset-btn {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.Anime-reset-btn:hover {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.Anime-list-pending {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* 4 картки в ряд через CSS Grid */
+.Anime-list-section {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.1rem;
+    width: 100%;
+}
+
+@media (max-width: 1300px) {
+    .Anime-list-section {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 980px) {
+    .Anime-list-section {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .Anime-list-section {
+        grid-template-columns: 1fr;
+    }
+}
+
+.Anime-filter-section {
+    width: 20rem;
+    max-width: 30%;
+    position: sticky;
+    top: 1rem;
+    flex-shrink: 0;
+}
+
+.Anime-filter-body {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-sm);
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.Filter-heading {
+    margin: 0 0 1rem 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.Filter-heading::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 16px;
+    background-color: var(--accent-color);
+    border-radius: 2px;
+}
+
+.Filter-group {
+    margin-bottom: 1.2rem;
+}
+
+.Filter-label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.45rem;
+}
+
+/* Кастомний акуратний select без стандартних стрілок браузера */
+.Anime-filter-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    padding: 0.6rem 2.2rem 0.6rem 0.85rem;
+    background-color: var(--bg-secondary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    background-size: 1rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.Anime-filter-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.Anime-filter-select option {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+.Year-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Кастомні числові інпути без стандартних стрілок */
+.Year-input {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    outline: none;
+    -moz-appearance: textfield;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.Year-input::-webkit-outer-spin-button,
+.Year-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.Year-input::placeholder {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.Year-input:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.Year-separator {
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+.Filter-genres-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.45rem;
+}
+
+.Filter-clear-text-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+
+/* Кастомний плавний скролбар для списку жанрів */
+.Genres-pill-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 0.45rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-secondary);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.Genres-pill-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.Genres-pill-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.Genres-pill-container::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.Genres-pill-container::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+}
+
+.Genre-pill {
+    background-color: var(--card-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.Genre-pill:hover {
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+}
+
+.Genre-pill-selected {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border-color: var(--accent-hover);
+    font-weight: 600;
+}
+
+.Genre-pill-selected:hover {
+    background-color: var(--accent-hover);
+    color: #ffffff;
+}
+
+.Pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin: 1.5rem 0 2rem 0;
+    padding: 0.85rem 1.8rem;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+}
+
+.Pagination-btn {
+    padding: 0.55rem 1.3rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.Pagination-btn:hover:not(:disabled) {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border-color: var(--accent-hover);
+}
+
+.Pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.Pagination-info {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.Pagination-info strong {
+    color: var(--accent-color);
+}
+
+.Anime-empty-msg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin: 3rem 1rem;
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+.Anime-loading-simple {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80%;
+    min-height: 240px;
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+}

@@ -1,36 +1,37 @@
-import {useState} from 'react'
-
-import {MOCK_KPI_DATA} from "../data/mockAnime.js";
+import { useMemo } from 'react';
 import KpiCard from "./KpiCard.jsx";
+import { calculateKpis } from "../utils/kpi.js";
+import "./CardSection.css";
 
-import "../componentsStyles/CardSection.css"
-import Toggle from "./Toggle.jsx";
-
-
-function CardSection() {
-
-    const [isDark, setIsDark] = useState(true);
+function CardSection({ animeList, kpiData }) {
+    const metrics = useMemo(() => {
+        if (kpiData) return kpiData;
+        if (animeList) return calculateKpis(animeList);
+        return calculateKpis([]);
+    }, [kpiData, animeList]);
 
     return (
-        <div className={`Card-section-container ${isDark?'Dark-theme':'Light-theme'}`}>
-            <div className='Theme-toggle-container'>
-                <Toggle
-                    isChecked={isDark}
-                    onToggle={setIsDark}
-                />
-             </div>
+        <section className="Card-section-container">
+            <div className="Card-section-header">
+                <div className="Card-section-title-wrap">
+                    <h2 className="Card-section-heading">Метрики дашборду</h2>
+                    <span className="Card-section-sub">Глобальні показники аналітики</span>
+                </div>
+            </div>
 
-            <div className={`Card-section ${isDark?'Dark-theme':'Light-theme'}`}>
-                {MOCK_KPI_DATA.map((kpi) => (
-                     <KpiCard
+            <div className="Card-section">
+                {metrics.map((kpi) => (
+                    <KpiCard
                         key={kpi.id}
                         title={kpi.title}
                         value={kpi.value}
                         change={kpi.change}
+                        unit={kpi.unit}
                     />
                 ))}
             </div>
-    </div>
-   )
+        </section>
+    );
 }
+
 export default CardSection;

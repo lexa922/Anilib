@@ -1,0 +1,65 @@
+:root {
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+
+  /* М'якша світла тема (не б'є в очі, комфортний приглушений тон) */
+  --bg-primary: #ebeef2;
+  --bg-surface: #f3f5f8;
+  --bg-secondary: #e1e5eb;
+  --border-color: #cbd2dc;
+  --border-focus: #10b981;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent-color: #10b981;
+  --accent-hover: #059669;
+  --accent-light: rgba(16, 185, 129, 0.14);
+  --accent-border: rgba(16, 185, 129, 0.45);
+  --card-bg: #fafbfc;
+  --kpi-bg: #f3f5f8;
+  --kpi-border: #cbd2dc;
+  --badge-bg: #e2e7ef;
+  --badge-text: #334155;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --skeleton-base: #dde2ea;
+  --skeleton-highlight: #edf0f5;
+}
+
+/* Dark Theme: Темно-сірий, світло-сірий, зелений акцент */
+[data-theme="dark"],
+.dark-theme {
+  --bg-primary: #121417;
+  --bg-surface: #1a1d24;
+  --bg-secondary: #222631;
+  --border-color: #2e3442;
+  --border-focus: #10b981;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --accent-color: #10b981;
+  --accent-hover: #059669;
+  --accent-light: rgba(16, 185, 129, 0.16);
+  --accent-border: #10b981;
+  --card-bg: #1e222b;
+  --kpi-bg: #1a1d24;
+  --kpi-border: #2e3442;
+  --badge-bg: #272d3b;
+  --badge-text: #d1d5db;
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
+  --skeleton-base: #222631;
+  --skeleton-highlight: #2f3644;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.25s ease, color 0.25s ease;
+  min-height: 100vh;
+}

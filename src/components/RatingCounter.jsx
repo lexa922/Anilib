@@ -1,4 +1,4 @@
-import "../componentsStyles/RatingCounter.css"
+import "./RatingCounter.css"
 
 import {useState} from "react";
 
