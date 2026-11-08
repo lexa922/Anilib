@@ -1,19 +1,24 @@
-import { AnimeSourceStrategy } from './AnimeSourceStrategy.js';
 import { MOCK_ANIME_LIST, MOCK_GENRES } from '../data/mockAnime.js';
 import { normalizeAnime } from '../utils/adapters.js';
+import { sortAnime, resolveServerSort } from './animeSorting.js';
 
-export class MockAnimeStrategy extends AnimeSourceStrategy {
-    constructor(mockData = MOCK_ANIME_LIST) {
-        super();
-        this.mockData = mockData;
-    }
-
-    getTopAnimeSync(params = {}) {
+export function createMockAnimeStrategy(mockData = MOCK_ANIME_LIST) {
+    function getTopAnimeSync(params = {}) {
         const limit = params.limit || 12;
         const page = params.page || 1;
-        const genres = Array.isArray(params.genres)
-            ? params.genres
-            : (params.genre && params.genre !== 'Всі' ? [params.genre] : []);
+        const sort = resolveServerSort(params.sort);
+        const query = (params.query || params.text || '').trim().toLowerCase();
+
+        const genresSet = new Set(
+            Array.isArray(params.genres)
+                ? params.genres
+                : (params.genre && params.genre !== 'Всі' ? [params.genre] : [])
+        );
+        if (params.category && params.category !== 'all' && params.category !== 'Всі') {
+            genresSet.add(params.category);
+        }
+        const genres = Array.from(genresSet);
+
         const status = params.status && params.status !== 'all' ? params.status : null;
         const yearFrom = params.yearFrom !== '' && params.yearFrom !== undefined && params.yearFrom !== null
             ? Number(params.yearFrom)
@@ -22,12 +27,20 @@ export class MockAnimeStrategy extends AnimeSourceStrategy {
             ? Number(params.yearTo)
             : null;
 
-        let list = this.mockData.map(normalizeAnime);
+        let list = mockData.map(normalizeAnime);
+
+        if (query) {
+            list = list.filter((anime) =>
+                (anime.title || '').toLowerCase().includes(query)
+            );
+        }
 
         if (genres.length > 0) {
             list = list.filter((anime) => {
-                const names = (anime.genres || []).map((g) => (typeof g === 'string' ? g : g.name));
-                return genres.every((sg) => names.includes(sg));
+                const names = (anime.genres || []).map((g) =>
+                    (typeof g === 'string' ? g : g.name).toLowerCase()
+                );
+                return genres.every((sg) => names.includes(sg.toLowerCase()));
             });
         }
 
@@ -38,24 +51,48 @@ export class MockAnimeStrategy extends AnimeSourceStrategy {
         if (yearFrom !== null && !isNaN(yearFrom)) {
             list = list.filter((anime) => anime.year && anime.year >= yearFrom);
         }
-
         if (yearTo !== null && !isNaN(yearTo)) {
             list = list.filter((anime) => anime.year && anime.year <= yearTo);
         }
+
+        list = sortAnime(list, sort);
 
         const startIndex = (page - 1) * limit;
         return list.slice(startIndex, startIndex + limit);
     }
 
-    async getTopAnime(params = {}) {
-        return this.getTopAnimeSync(params);
-    }
+    return {
+        sortAnime(list, sort) {
+            return sortAnime(list, sort);
+        },
 
-    async getCategories() {
-        return MOCK_GENRES.filter((g) => g !== 'Всі').map((genre) => ({
-            id: genre,
-            title: genre,
-            slug: genre.toLowerCase()
-        }));
-    }
+        getTopAnimeSync,
+
+        async getTopAnime(params = {}, signal = null) {
+            if (signal && signal.aborted) {
+                const err = new Error('Request was aborted');
+                err.name = 'AbortError';
+                throw err;
+            }
+            return getTopAnimeSync(params);
+        },
+
+        async getAnime(params = {}, signal = null) {
+            return this.getTopAnime(params, signal);
+        },
+
+        async getAnimeById(id) {
+            const found = mockData.find((a) => String(a.id) === String(id));
+            if (!found) throw new Error(`Anime not found: ${id}`);
+            return normalizeAnime(found);
+        },
+
+        async getCategories() {
+            return MOCK_GENRES.filter((g) => g !== 'Всі').map((genre) => ({
+                id: genre,
+                title: genre,
+                slug: genre.toLowerCase()
+            }));
+        }
+    };
 }

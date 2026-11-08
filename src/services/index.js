@@ -1,5 +1,6 @@
-export { AnimeSourceStrategy } from './AnimeSourceStrategy.js';
-export { MockAnimeStrategy } from './MockAnimeStrategy.js';
-export { KitsuAnimeStrategy } from './KitsuAnimeStrategy.js';
-export { JikanAnimeStrategy } from './JikanAnimeStrategy.js';
-export { AnimeApiClient, animeApiClient } from './animeApiClient.js';
+export { createAnimeSourceStrategy } from './AnimeSourceStrategy.js';
+export { createMockAnimeStrategy } from './MockAnimeStrategy.js';
+export { createKitsuAnimeStrategy } from './KitsuAnimeStrategy.js';
+export { createJikanAnimeStrategy } from './JikanAnimeStrategy.js';
+export { createAnimeApiClient, animeApiClient } from './animeApiClient.js';
+export { sortAnime, resolveServerSort, ALLOWED_SORT_KEYS } from './animeSorting.js';

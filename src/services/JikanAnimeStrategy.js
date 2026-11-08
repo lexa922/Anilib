@@ -1,24 +1,39 @@
-import { AnimeSourceStrategy } from './AnimeSourceStrategy.js';
 import { normalizeAnime } from '../utils/adapters.js';
+import { sortAnime } from './animeSorting.js';
 
-export class JikanAnimeStrategy extends AnimeSourceStrategy {
-    constructor(baseUrl = 'https://api.jikan.moe/v4') {
-        super();
-        this.baseUrl = baseUrl;
-    }
+export function createJikanAnimeStrategy(baseUrl = 'https://api.jikan.moe/v4') {
+    return {
+        baseUrl,
 
-    async getTopAnime(params = {}) {
-        const queryParams = new URLSearchParams();
-        if (params.limit) {
-            queryParams.set('limit', String(params.limit));
+        sortAnime(list, sort) {
+            return sortAnime(list, sort);
+        },
+
+        async getTopAnime(params = {}) {
+            const queryParams = new URLSearchParams();
+            if (params.limit) {
+                queryParams.set('limit', String(params.limit));
+            }
+            if (params.page) {
+                queryParams.set('page', String(params.page));
+            }
+
+            const response = await fetch(`${baseUrl}/top/anime?${queryParams.toString()}`);
+            if (!response.ok) {
+                throw new Error(`Jikan API error: ${response.status} ${response.statusText}`);
+            }
+
+            const json = await response.json();
+            const normalized = (json.data || []).map(normalizeAnime);
+
+            if (params.sort) {
+                return sortAnime(normalized, params.sort);
+            }
+            return normalized;
+        },
+
+        async getCategories() {
+            return [];
         }
-
-        const response = await fetch(`${this.baseUrl}/top/anime?${queryParams.toString()}`);
-        if (!response.ok) {
-            throw new Error(`Jikan API error: ${response.status} ${response.statusText}`);
-        }
-
-        const json = await response.json();
-        return (json.data || []).map(normalizeAnime);
-    }
+    };
 }
