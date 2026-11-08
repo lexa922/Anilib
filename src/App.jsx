@@ -1,96 +1,35 @@
-import { useState, useCallback, useTransition, use, Suspense } from 'react';
+import { useMemo } from 'react';
 import CardSection from './components/CardSection';
 import AnimeSection from './components/AnimeSection';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorDisplay from './components/ErrorDisplay';
-import DashboardSkeleton from './components/DashboardSkeleton';
 import Toggle from './components/Toggle';
 import { ThemeProvider } from './context/index.js';
-import { animeApiClient } from './services/index.js';
+import { useAnimeQuery } from './hooks/index.js';
+import { calculateKpis } from './utils/kpi.js';
 import "./App.css";
 
-const PAGE_SIZE = 12;
-
-function DashboardContent({
-    animePromise,
-    currentPage,
-    onPageChange,
-    filters,
-    onFiltersChange,
-    isPending
-}) {
-    const currentPageAnime = use(animePromise);
-
-    const globalAnimeList = animeApiClient.getAllLoadedAnime();
-
-    return (
-        <>
-            <CardSection animeList={globalAnimeList} />
-            <AnimeSection
-                animeList={currentPageAnime}
-                currentPage={currentPage}
-                onPageChange={onPageChange}
-                filters={filters}
-                onFiltersChange={onFiltersChange}
-                isPending={isPending}
-            />
-        </>
-    );
-}
-
 function MainDashboard() {
-    const [currentPage, setCurrentPage] = useState(1);
-    const [filters, setFilters] = useState({
-        genres: [],
-        status: 'all',
-        yearFrom: '',
-        yearTo: ''
-    });
+    const {
+        data: animeList,
+        globalAnimeList,
+        loading,
+        error,
+        refetch,
+        searchQuery,
+        onSearchChange,
+        filters,
+        onFiltersChange,
+        onResetFilters,
+        sort,
+        onSortChange,
+        currentPage,
+        onPageChange
+    } = useAnimeQuery();
 
-    const [topAnimePromise, setTopAnimePromise] = useState(() =>
-        animeApiClient.getTopAnime({ limit: PAGE_SIZE, page: 1, ...filters })
-    );
-    const [isPending, startTransition] = useTransition();
-
-    const handleFiltersChange = useCallback((newFilters) => {
-        setFilters(newFilters);
-        setCurrentPage(1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        startTransition(() => {
-            setTopAnimePromise(
-                animeApiClient.getTopAnime({
-                    limit: PAGE_SIZE,
-                    page: 1,
-                    ...newFilters
-                })
-            );
-        });
-    }, []);
-
-    const handlePageChange = useCallback((newPage) => {
-        if (newPage < 1) return;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        startTransition(() => {
-            setCurrentPage(newPage);
-            setTopAnimePromise(
-                animeApiClient.getTopAnime({
-                    limit: PAGE_SIZE,
-                    page: newPage,
-                    ...filters
-                })
-            );
-        });
-    }, [filters]);
-
-    const handleRetry = useCallback(() => {
-        setTopAnimePromise(
-            animeApiClient.getTopAnime({
-                limit: PAGE_SIZE,
-                page: currentPage,
-                ...filters
-            })
-        );
-    }, [currentPage, filters]);
+    const kpiData = useMemo(() => {
+        return calculateKpis(globalAnimeList);
+    }, [globalAnimeList]);
 
     return (
         <>
@@ -105,36 +44,51 @@ function MainDashboard() {
 
             <main className="app-main">
                 <ErrorBoundary
-                    fallback={({ error, reset }) => (
+                    fallback={({ error: boundaryError, reset }) => (
                         <ErrorDisplay
-                            error={error}
+                            error={boundaryError}
                             onRetry={() => {
-                                handleRetry();
+                                refetch();
                                 reset();
                             }}
                         />
                     )}
                 >
-                    <Suspense fallback={<DashboardSkeleton />}>
-                        <DashboardContent
-                            animePromise={topAnimePromise}
-                            currentPage={currentPage}
-                            onPageChange={handlePageChange}
-                            filters={filters}
-                            onFiltersChange={handleFiltersChange}
-                            isPending={isPending}
-                        />
-                    </Suspense>
+                    {error ? (
+                        <ErrorDisplay error={error} onRetry={refetch} />
+                    ) : (
+                        <>
+                            <CardSection
+                                kpiData={kpiData}
+                                totalCount={globalAnimeList.length}
+                            />
+                            <AnimeSection
+                                animeList={animeList}
+                                currentPage={currentPage}
+                                onPageChange={onPageChange}
+                                sort={sort}
+                                onSortChange={onSortChange}
+                                searchQuery={searchQuery}
+                                onSearchChange={onSearchChange}
+                                filters={filters}
+                                onFiltersChange={onFiltersChange}
+                                onResetFilters={onResetFilters}
+                                loading={loading}
+                            />
+                        </>
+                    )}
                 </ErrorBoundary>
             </main>
         </>
     );
 }
 
-function App() {
+export function App() {
     return (
         <ThemeProvider>
-            <MainDashboard />
+            <div className="app-container">
+                <MainDashboard />
+            </div>
         </ThemeProvider>
     );
 }

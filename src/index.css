@@ -1,7 +1,6 @@
 :root {
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 
-  /* М'якша світла тема (не б'є в очі, комфортний приглушений тон) */
   --bg-primary: #ebeef2;
   --bg-surface: #f3f5f8;
   --bg-secondary: #e1e5eb;
@@ -25,7 +24,6 @@
   --skeleton-highlight: #edf0f5;
 }
 
-/* Dark Theme: Темно-сірий, світло-сірий, зелений акцент */
 [data-theme="dark"],
 .dark-theme {
   --bg-primary: #121417;

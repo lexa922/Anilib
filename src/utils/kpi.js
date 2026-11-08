@@ -1,41 +1,54 @@
 export function calculateKpis(animeList = []) {
-    const BENCHMARK_SCORE = 7.50;
+    const BENCHMARK_SCORE = 7.00;
 
     if (!Array.isArray(animeList) || animeList.length === 0) {
         return [
             {
                 id: 'kpi-avg-score',
                 title: 'Середній бал вибірки',
-                value: '0.00',
-                change: '0.00',
+                value: 'N/A',
+                change: null,
                 unit: ''
             },
             {
                 id: 'kpi-top-score',
                 title: 'Найвищий рейтинг',
-                value: '0.00',
-                change: '0.00',
+                value: 'N/A',
+                change: null,
                 unit: ''
             },
             {
                 id: 'kpi-airing-share',
                 title: 'Частка онґоїнґів',
-                value: '0',
+                value: '0 / 0',
                 change: '0.0',
                 unit: '%'
             }
         ];
     }
 
-    const scoredAnime = animeList.filter((a) => a.score != null && !isNaN(Number(a.score)));
+    const scoredAnime = animeList.filter((a) => {
+        if (a.score == null || a.score === '' || a.score === '?' || a.score === 'N/A') return false;
+        const num = Number(a.score);
+        return !isNaN(num) && num > 0;
+    });
 
-    const totalScore = scoredAnime.reduce((acc, curr) => acc + Number(curr.score), 0);
-    const avgScore = scoredAnime.length > 0 ? totalScore / scoredAnime.length : 0;
-    const avgScoreDelta = (avgScore - BENCHMARK_SCORE).toFixed(2);
+    let avgScoreValue = 'N/A';
+    let avgScoreDelta = null;
+    let maxScoreValue = 'N/A';
+    let topScoreDelta = null;
 
-    const scoreValues = scoredAnime.map((a) => Number(a.score));
-    const maxScore = scoreValues.length > 0 ? Math.max(...scoreValues) : 0;
-    const topScoreDelta = (maxScore - avgScore).toFixed(2);
+    if (scoredAnime.length > 0) {
+        const totalScore = scoredAnime.reduce((acc, curr) => acc + Number(curr.score), 0);
+        const avgScore = totalScore / scoredAnime.length;
+        avgScoreValue = avgScore.toFixed(2);
+        avgScoreDelta = (avgScore - BENCHMARK_SCORE).toFixed(2);
+
+        const scoreValues = scoredAnime.map((a) => Number(a.score));
+        const maxScore = Math.max(...scoreValues);
+        maxScoreValue = maxScore.toFixed(2);
+        topScoreDelta = (maxScore - avgScore).toFixed(2);
+    }
 
     const airingAnime = animeList.filter((a) => {
         const s = (a.status || '').toLowerCase();
@@ -48,14 +61,14 @@ export function calculateKpis(animeList = []) {
         {
             id: 'kpi-avg-score',
             title: 'Середній бал вибірки',
-            value: avgScore.toFixed(2),
+            value: avgScoreValue,
             change: avgScoreDelta,
             unit: ''
         },
         {
             id: 'kpi-top-score',
             title: 'Найвищий рейтинг',
-            value: maxScore.toFixed(2),
+            value: maxScoreValue,
             change: topScoreDelta,
             unit: ''
         },
