@@ -1,8 +1,32 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { RatingContext } from './RatingContext.js';
+import { userLibraryService } from '../api/userLibraryService.js';
 
 export function RatingProvider({ children }) {
     const [ratings, setRatings] = useState({});
+
+    useEffect(() => {
+        const controller = new AbortController();
+        userLibraryService.getLibrary(controller.signal)
+            .then((items) => {
+                if (Array.isArray(items)) {
+                    const map = {};
+                    items.forEach((item) => {
+                        if (item.user_score > 0) {
+                            map[String(item.id)] = Number(item.user_score);
+                        }
+                    });
+                    setRatings((prev) => ({ ...map, ...prev }));
+                }
+            })
+            .catch(() => {
+                // Silently ignore if server is unreachable
+            });
+
+        return () => {
+            controller.abort();
+        };
+    }, []);
 
     const getRating = useCallback((animeId) => {
         if (!animeId) return 0;
