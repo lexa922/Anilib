@@ -1,26 +1,130 @@
-.Anime-rating{
-    border: 1px solid black;
-    border-radius: 0.3em;
-    padding: 0.3em;
-    margin: 0.5em 0;
-}
-
-.Anime-rating-controls{
-    width: 7em;
+.Anime-rating-widget {
     display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.Anime-rating {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: 0.45rem;
+    padding: 0.45rem 0.65rem;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-sizing: border-box;
 }
 
-.Control-button{
-    border: none;
-    outline: none;
-    background-color: #505050;
-    color: white;
-    padding: 0.3em 0.8em;
-    border-radius: 0.3em;
+.Anime-rating-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
 }
 
-.Control-button:hover{
-    background-color: #303030;
-    color: #c9c9c9;
+.Anime-rating-score-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.Anime-rating-star {
+    color: #f59e0b;
+    font-size: 1.05rem;
+}
+
+.Anime-rating-score {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    min-width: 2.2rem;
+}
+
+.Anime-rating-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: auto;
+}
+
+.Control-button {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: inherit;
+    user-select: none;
+}
+
+.Control-button.step-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.Control-button.reset-btn {
+    padding: 0 0.45rem;
+    height: 28px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.Control-button:hover:not(:disabled) {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    background-color: var(--accent-light);
+}
+
+.Control-button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.Anime-rating-action-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.Anime-rating-submit-btn {
+    flex: 1;
+    padding: 0.45rem 0.85rem;
+    background-color: var(--accent-color);
+    color: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 600;
+    border: 1px solid var(--accent-hover);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.Anime-rating-submit-btn:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+}
+
+.Anime-rating-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--bg-secondary);
+    color: var(--text-muted);
+    border-color: var(--border-color);
+}
+
+.Anime-rating-saved-msg {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    white-space: nowrap;
 }

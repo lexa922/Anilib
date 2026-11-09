@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 AGENTS.md
+*.db
+*.db-*
+*.sqlite
