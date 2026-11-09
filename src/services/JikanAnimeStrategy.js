@@ -32,6 +32,17 @@ export function createJikanAnimeStrategy(baseUrl = 'https://api.jikan.moe/v4') {
             return normalized;
         },
 
+        async getAnimeById(id) {
+            const response = await fetch(`${baseUrl}/anime/${id}`);
+            if (!response.ok) {
+                const notFoundError = new Error(`Аніме з ID "${id}" не знайдено`);
+                notFoundError.status = response.status;
+                throw notFoundError;
+            }
+            const json = await response.json();
+            return normalizeAnime(json.data);
+        },
+
         async getCategories() {
             return [];
         }

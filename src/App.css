@@ -16,6 +16,13 @@
   box-shadow: var(--shadow-sm);
 }
 
+.app-brand-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+}
+
 .app-brand {
   display: flex;
   align-items: center;

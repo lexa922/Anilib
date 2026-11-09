@@ -153,11 +153,32 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
             });
 
             if (!response.ok) {
-                throw new Error(`Kitsu API error: ${response.status} ${response.statusText}`);
+                if (response.status === 404) {
+                    const notFoundError = new Error(`Аніме з ID "${id}" не знайдено`);
+                    notFoundError.status = 404;
+                    throw notFoundError;
+                }
+                const err = new Error(`Kitsu API error: ${response.status} ${response.statusText}`);
+                err.status = response.status;
+                throw err;
             }
 
             const json = await response.json();
-            return normalizeAnime(json.data);
+            const categoryMap = new Map();
+            (json.included || []).forEach((inc) => {
+                if (inc.type === 'categories' && inc.attributes?.title) {
+                    categoryMap.set(inc.id, inc.attributes.title);
+                }
+            });
+
+            const itemGenres = (json.data?.relationships?.categories?.data || [])
+                .map((cat) => ({ id: String(cat.id), name: categoryMap.get(cat.id) }))
+                .filter((g) => Boolean(g.name));
+
+            return normalizeAnime({
+                ...json.data,
+                genres: itemGenres
+            });
         },
 
         async getCategories(limit = 40, signal = null) {

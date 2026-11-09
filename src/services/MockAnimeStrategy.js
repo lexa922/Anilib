@@ -83,7 +83,11 @@ export function createMockAnimeStrategy(mockData = MOCK_ANIME_LIST) {
 
         async getAnimeById(id) {
             const found = mockData.find((a) => String(a.id) === String(id));
-            if (!found) throw new Error(`Anime not found: ${id}`);
+            if (!found) {
+                const notFoundError = new Error(`Аніме з ID "${id}" не знайдено`);
+                notFoundError.status = 404;
+                throw notFoundError;
+            }
             return normalizeAnime(found);
         },
 

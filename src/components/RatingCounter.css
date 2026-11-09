@@ -1,26 +1,94 @@
-.Anime-rating{
-    border: 1px solid black;
-    border-radius: 0.3em;
-    padding: 0.3em;
-    margin: 0.5em 0;
-}
-
-.Anime-rating-controls{
-    width: 7em;
+.Anime-rating-widget {
     display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
+}
+
+.Anime-rating {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.45rem 0.85rem;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
 }
 
-.Control-button{
-    border: none;
-    outline: none;
-    background-color: #505050;
-    color: white;
-    padding: 0.3em 0.8em;
-    border-radius: 0.3em;
+.Anime-rating p {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-secondary);
 }
 
-.Control-button:hover{
-    background-color: #303030;
-    color: #c9c9c9;
+.Anime-rating-score {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    min-width: 1.4rem;
+    text-align: center;
+}
+
+.Anime-rating-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.Control-button {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 0.25rem 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.Control-button:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.Anime-rating-action-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.Anime-rating-submit-btn {
+    flex: 1;
+    padding: 0.45rem 0.85rem;
+    background-color: var(--accent-color);
+    color: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 600;
+    border: 1px solid var(--accent-hover);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.Anime-rating-submit-btn:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+}
+
+.Anime-rating-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--bg-secondary);
+    color: var(--text-muted);
+    border-color: var(--border-color);
+}
+
+.Anime-rating-saved-msg {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    white-space: nowrap;
 }
