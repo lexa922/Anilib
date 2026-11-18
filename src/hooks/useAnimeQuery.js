@@ -52,7 +52,6 @@ export function useAnimeQuery(initialOptions = {}) {
     useEffect(() => {
         updateUrlParams({
             query: debouncedSearchQuery,
-            category: filters.genres && filters.genres.length > 0 ? filters.genres.join(',') : 'all',
             status: filters.status,
             yearFrom: filters.yearFrom,
             yearTo: filters.yearTo,
@@ -109,6 +108,7 @@ export function useAnimeQuery(initialOptions = {}) {
         sort,
         onSortChange: handleSortChange,
         currentPage,
-        onPageChange: handlePageChange
+        onPageChange: handlePageChange,
+        pageSize: limit
     };
 }

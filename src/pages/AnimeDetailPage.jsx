@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { animeApiClient } from '../services/index.js';
 import { userLibraryService } from '../api/userLibraryService.js';
-import useFetch from '../hooks/useFetch.js';
+import { useFetch, useFeedback } from '../hooks/index.js';
 import RatingCounter from '../components/RatingCounter.jsx';
 import { useRatings } from '../context/index.js';
 import './AnimeDetailPage.css';
@@ -18,7 +18,7 @@ export function AnimeDetailPage() {
     const [notes, setNotes] = useState('');
     const [libraryRating, setLibraryRating] = useState(0);
     const [inLibrary, setInLibrary] = useState(false);
-    const [feedback, setFeedback] = useState(null);
+    const [feedback, showFeedback] = useFeedback();
     const [librarySaving, setLibrarySaving] = useState(false);
 
     const fetchAnime = useCallback((signal) => {
@@ -65,11 +65,6 @@ export function AnimeDetailPage() {
             controller.abort();
         };
     }, [id, setRating, getRating]);
-
-    const showFeedback = (msg, isErr = false) => {
-        setFeedback({ message: msg, isError: isErr });
-        setTimeout(() => setFeedback(null), 3500);
-    };
 
     const handleRatingChange = (newVal) => {
         setLibraryRating(newVal);
