@@ -1,21 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DEFAULT_SORT } from '../constants/sortOptions.js';
 
-export function parseUrlParams() {
-    if (typeof window === 'undefined') {
-        return {
-            query: '',
-            category: 'all',
-            sort: DEFAULT_SORT,
-            genres: [],
-            status: 'all',
-            yearFrom: '',
-            yearTo: '',
-            page: 1
-        };
-    }
-
-    const searchParams = new URLSearchParams(window.location.search);
+export function parseUrlParams(search = typeof window !== 'undefined' ? window.location.search : '') {
+    const searchParams = search instanceof URLSearchParams ? search : new URLSearchParams(search);
     const query = searchParams.get('query') || searchParams.get('q') || '';
     const category = searchParams.get('category') || 'all';
     const sort = searchParams.get('sort') || DEFAULT_SORT;
@@ -25,7 +13,7 @@ export function parseUrlParams() {
     const yearFrom = searchParams.get('yearFrom') || '';
     const yearTo = searchParams.get('yearTo') || '';
     const pageRaw = parseInt(searchParams.get('page'), 10);
-    const page = !isNaN(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+    const page = !Number.isNaN(pageRaw) && pageRaw > 0 ? pageRaw : 1;
 
     return {
         query,
@@ -39,81 +27,55 @@ export function parseUrlParams() {
     };
 }
 
-export function syncUrlParams({ query, category, sort, genres, status, yearFrom, yearTo, page }) {
-    if (typeof window === 'undefined') return;
-
-    const url = new URL(window.location.href);
+export function buildSearchParams({ query, sort, genres, status, yearFrom, yearTo, page }) {
+    const next = new URLSearchParams();
 
     if (query && String(query).trim()) {
-        url.searchParams.set('query', String(query).trim());
-    } else {
-        url.searchParams.delete('query');
+        next.set('query', String(query).trim());
     }
 
-    if (category && category !== 'all') {
-        url.searchParams.set('category', category);
-    } else {
-        url.searchParams.delete('category');
-    }
-
-    if (!sort || sort === DEFAULT_SORT) {
-        url.searchParams.delete('sort');
-    } else {
-        url.searchParams.set('sort', sort);
+    if (sort && sort !== DEFAULT_SORT) {
+        next.set('sort', sort);
     }
 
     if (Array.isArray(genres) && genres.length > 0) {
-        url.searchParams.set('genres', genres.join(','));
-    } else {
-        url.searchParams.delete('genres');
+        next.set('genres', genres.join(','));
     }
 
-    if (!status || status === 'all') {
-        url.searchParams.delete('status');
-    } else {
-        url.searchParams.set('status', status);
+    if (status && status !== 'all') {
+        next.set('status', status);
     }
 
     if (yearFrom !== '' && yearFrom !== undefined && yearFrom !== null) {
-        url.searchParams.set('yearFrom', String(yearFrom));
-    } else {
-        url.searchParams.delete('yearFrom');
+        next.set('yearFrom', String(yearFrom));
     }
 
     if (yearTo !== '' && yearTo !== undefined && yearTo !== null) {
-        url.searchParams.set('yearTo', String(yearTo));
-    } else {
-        url.searchParams.delete('yearTo');
+        next.set('yearTo', String(yearTo));
     }
 
-    if (!page || page <= 1) {
-        url.searchParams.delete('page');
-    } else {
-        url.searchParams.set('page', String(page));
+    if (page && page > 1) {
+        next.set('page', String(page));
     }
 
-    window.history.pushState({}, '', url);
+    return next;
 }
 
 export function useUrlParams() {
-    const [params, setParams] = useState(parseUrlParams);
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    useEffect(() => {
-        const handlePopState = () => {
-            setParams(parseUrlParams());
-        };
+    const params = useMemo(() => parseUrlParams(searchParams), [searchParams]);
 
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, []);
-
-    const updateParams = useCallback((newPartial) => {
-        setParams((prev) => {
-            const next = { ...prev, ...newPartial };
-            syncUrlParams(next);
+    const updateParams = useCallback((nextValues) => {
+        setSearchParams((prev) => {
+            const current = parseUrlParams(prev);
+            const next = buildSearchParams({ ...current, ...nextValues });
+            if (next.toString() === prev.toString()) {
+                return prev;
+            }
             return next;
-        });
-    }, []);
+        }, { replace: true });
+    }, [setSearchParams]);
 
     return [params, updateParams];
 }

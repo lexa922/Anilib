@@ -1,7 +1,97 @@
 import { normalizeAnime } from '../utils/adapters.js';
 import { sortAnime, resolveServerSort } from './animeSorting.js';
+import { parseFilterParams, buildKitsuFilterQuery, filterByGenres, filterAnimeList } from './animeFiltering.js';
+import { normalizePagination, paginateAnime } from './animePagination.js';
+
+const KITSU_HEADERS = {
+    'Accept': 'application/vnd.api+json',
+    'Content-Type': 'application/vnd.api+json'
+};
 
 export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') {
+    async function fetchKitsuBatch({ filters, sortParam, offset, batchSize, signal }) {
+        if (signal && signal.aborted) {
+            const abortError = new Error('Request was aborted');
+            abortError.name = 'AbortError';
+            throw abortError;
+        }
+
+        const queryParams = new URLSearchParams();
+        buildKitsuFilterQuery(filters, queryParams);
+        queryParams.set('sort', sortParam);
+        queryParams.set('page[limit]', String(batchSize));
+        queryParams.set('page[offset]', String(offset));
+        queryParams.set('include', 'categories');
+
+        const response = await fetch(`${baseUrl}/anime?${queryParams.toString()}`, {
+            signal,
+            headers: KITSU_HEADERS
+        });
+
+        if (!response.ok) {
+            throw new Error(`Kitsu API error: ${response.status} ${response.statusText}`);
+        }
+
+        const json = await response.json();
+        const data = json.data || [];
+
+        const categoryMap = new Map();
+        (json.included || []).forEach((inc) => {
+            if (inc.type === 'categories' && inc.attributes?.title) {
+                categoryMap.set(inc.id, inc.attributes.title);
+            }
+        });
+
+        const normalizedItems = data.map((item) => {
+            const itemGenres = (item.relationships?.categories?.data || [])
+                .map((cat) => ({ id: String(cat.id), name: categoryMap.get(cat.id) }))
+                .filter((g) => Boolean(g.name));
+
+            return normalizeAnime({
+                ...item,
+                genres: itemGenres
+            });
+        });
+
+        return {
+            items: normalizedItems,
+            reachedEnd: data.length < batchSize
+        };
+    }
+
+    async function collectMultiGenreMatches({ filters, sortParam, targetCount, signal }) {
+        const matched = [];
+        const batchSize = 20;
+        const MAX_REQUESTS = 12;
+        let currentApiOffset = 0;
+        let reachedEnd = false;
+        let requestCount = 0;
+
+        while (matched.length < targetCount && !reachedEnd && requestCount < MAX_REQUESTS) {
+            requestCount++;
+            const batch = await fetchKitsuBatch({
+                filters,
+                sortParam,
+                offset: currentApiOffset,
+                batchSize,
+                signal
+            });
+
+            reachedEnd = batch.reachedEnd;
+            const refined = filterByGenres(batch.items, filters.genres);
+
+            for (const item of refined) {
+                if (!matched.some((m) => m.id === item.id)) {
+                    matched.push(item);
+                }
+            }
+
+            currentApiOffset += batchSize;
+        }
+
+        return sortAnime(matched, sortParam);
+    }
+
     return {
         baseUrl,
 
@@ -9,138 +99,67 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
             return sortAnime(animeList, sort);
         },
 
-        resolveSortParam(sort) {
-            return resolveServerSort(sort);
+        filterAnime(animeList, filters) {
+            return filterAnimeList(animeList, filters);
         },
 
-        async getTopAnime(params = {}, signal = null) {
-            const limit = params.limit || 12;
-            const page = params.page || 1;
-            const sortParam = resolveServerSort(params.sort);
-            const textQuery = params.query || params.text || '';
+        paginateAnime(animeList, pagination) {
+            return paginateAnime(animeList, pagination);
+        },
 
-            const genresSet = new Set(
-                Array.isArray(params.genres)
-                    ? params.genres
-                    : (params.genre && params.genre !== 'Всі' ? [params.genre] : [])
-            );
-            if (params.category && params.category !== 'all' && params.category !== 'Всі') {
-                genresSet.add(params.category);
-            }
-            const genres = Array.from(genresSet);
-
-            const status = params.status && params.status !== 'all' ? params.status : null;
-            const yearFrom = params.yearFrom !== '' && params.yearFrom !== undefined && params.yearFrom !== null
-                ? Number(params.yearFrom)
-                : null;
-            const yearTo = params.yearTo !== '' && params.yearTo !== undefined && params.yearTo !== null
-                ? Number(params.yearTo)
-                : null;
-
-            const targetCount = page * limit;
-            const matched = [];
-            let currentApiOffset = (page - 1) * limit;
+        async getAnime(filters = {}, signal = null) {
+            const parsedFilters = parseFilterParams(filters);
+            const sortParam = resolveServerSort(filters.sort);
             const batchSize = 20;
-            let reachedEnd = false;
-            let requestCount = 0;
-            const MAX_REQUESTS = 12;
 
-            while (matched.length < targetCount && !reachedEnd && requestCount < MAX_REQUESTS) {
-                if (signal && signal.aborted) {
-                    const abortError = new Error('Request was aborted');
-                    abortError.name = 'AbortError';
-                    throw abortError;
-                }
-
-                requestCount++;
-                const queryParams = new URLSearchParams();
-
-                if (textQuery.trim()) {
-                    queryParams.set('filter[text]', textQuery.trim());
-                }
-
-                queryParams.set('sort', sortParam);
-                queryParams.set('page[limit]', String(batchSize));
-                queryParams.set('page[offset]', String(currentApiOffset));
-                queryParams.set('include', 'categories');
-
-                if (genres.length > 0) {
-                    queryParams.set('filter[categories]', genres.join(','));
-                }
-
-                if (status) {
-                    queryParams.set('filter[status]', status);
-                }
-
-                if (yearFrom !== null && yearTo !== null) {
-                    if (yearFrom === yearTo) {
-                        queryParams.set('filter[year]', String(yearFrom));
-                    } else {
-                        queryParams.set('filter[year]', `${yearFrom}..${yearTo}`);
-                    }
-                } else if (yearFrom !== null) {
-                    queryParams.set('filter[year]', `${yearFrom}..`);
-                } else if (yearTo !== null) {
-                    queryParams.set('filter[year]', `..${yearTo}`);
-                }
-
-                const response = await fetch(`${baseUrl}/anime?${queryParams.toString()}`, {
-                    signal,
-                    headers: {
-                        'Accept': 'application/vnd.api+json',
-                        'Content-Type': 'application/vnd.api+json'
-                    }
+            if (parsedFilters.genres.length > 1) {
+                return collectMultiGenreMatches({
+                    filters: parsedFilters,
+                    sortParam,
+                    targetCount: batchSize,
+                    signal
                 });
-
-                if (!response.ok) {
-                    throw new Error(`Kitsu API error: ${response.status} ${response.statusText}`);
-                }
-
-                const json = await response.json();
-                const data = json.data || [];
-
-                if (data.length < batchSize) {
-                    reachedEnd = true;
-                }
-
-                const categoryMap = new Map();
-                (json.included || []).forEach((inc) => {
-                    if (inc.type === 'categories' && inc.attributes?.title) {
-                        categoryMap.set(inc.id, inc.attributes.title);
-                    }
-                });
-
-                for (const item of data) {
-                    const itemGenres = (item.relationships?.categories?.data || [])
-                        .map((cat) => ({ id: String(cat.id), name: categoryMap.get(cat.id) }))
-                        .filter((g) => Boolean(g.name));
-
-                    const normalized = normalizeAnime({
-                        ...item,
-                        genres: itemGenres
-                    });
-
-                    if (genres.length > 1) {
-                        const genreNames = itemGenres.map((g) => g.name);
-                        const hasAll = genres.every((sg) => genreNames.includes(sg));
-                        if (!hasAll) continue;
-                    }
-
-                    if (!matched.some((m) => m.id === normalized.id)) {
-                        matched.push(normalized);
-                    }
-                }
-
-                currentApiOffset += batchSize;
             }
 
-            const sorted = sortAnime(matched, sortParam);
-            const startIndex = (page - 1) * limit;
-            return sorted.slice(startIndex, startIndex + limit);
+            const batch = await fetchKitsuBatch({
+                filters: parsedFilters,
+                sortParam,
+                offset: 0,
+                batchSize,
+                signal
+            });
+
+            return batch.items;
         },
 
-        async getAnime(params = {}, signal = null) {
-            return this.getTopAnime(params, signal);
+        async getAnimePage(filters = {}, pagination = {}, signal = null) {
+            const parsedFilters = parseFilterParams(filters);
+            const sortParam = resolveServerSort(filters.sort);
+            const { page, limit, offset } = normalizePagination(pagination);
+
+            if (parsedFilters.genres.length > 1) {
+                const matched = await collectMultiGenreMatches({
+                    filters: parsedFilters,
+                    sortParam,
+                    targetCount: page * limit,
+                    signal
+                });
+                return paginateAnime(matched, { page, limit });
+            }
+
+            const batch = await fetchKitsuBatch({
+                filters: parsedFilters,
+                sortParam,
+                offset,
+                batchSize: limit,
+                signal
+            });
+
+            return batch.items;
+        },
+
+        async getTopAnime(filters = {}, signal = null) {
+            return this.getAnime({ ...filters, sort: '-averageRating' }, signal);
         },
 
         async getAnimeById(id, signal = null) {

@@ -1,10 +1,5 @@
 const API_BASE = '/api';
 
-/**
- * Fetches all saved library entries sorted by updated_at DESC.
- * @param {AbortSignal} [signal]
- * @returns {Promise<Array>}
- */
 export async function getLibrary(signal) {
     const res = await fetch(`${API_BASE}/library`, { signal });
     if (!res.ok) {
@@ -13,13 +8,6 @@ export async function getLibrary(signal) {
     return res.json();
 }
 
-/**
- * Fetches single entry by anime ID.
- * Returns null if not in user's library (404).
- * @param {string|number} id
- * @param {AbortSignal} [signal]
- * @returns {Promise<Object|null>}
- */
 export async function getLibraryEntry(id, signal) {
     if (!id) return null;
     const res = await fetch(`${API_BASE}/library/${encodeURIComponent(id)}`, { signal });
@@ -32,18 +20,6 @@ export async function getLibraryEntry(id, signal) {
     return res.json();
 }
 
-/**
- * Upserts a library entry for anime ID.
- * @param {string|number} id
- * @param {Object} data
- * @param {string} [data.title]
- * @param {number} [data.user_score]
- * @param {string} [data.status]
- * @param {number} [data.episodes_watched]
- * @param {string} [data.notes]
- * @param {AbortSignal} [signal]
- * @returns {Promise<Object>}
- */
 export async function saveLibraryEntry(id, data, signal) {
     if (!id) {
         throw new Error('Anime ID is required to save library entry');
@@ -63,12 +39,6 @@ export async function saveLibraryEntry(id, data, signal) {
     return res.json();
 }
 
-/**
- * Removes entry from user's library.
- * @param {string|number} id
- * @param {AbortSignal} [signal]
- * @returns {Promise<Object>}
- */
 export async function deleteLibraryEntry(id, signal) {
     if (!id) return null;
     const res = await fetch(`${API_BASE}/library/${encodeURIComponent(id)}`, {
@@ -82,11 +52,6 @@ export async function deleteLibraryEntry(id, signal) {
     return res.json();
 }
 
-/**
- * Computes SQL aggregates from the backend.
- * @param {AbortSignal} [signal]
- * @returns {Promise<{completedCount: number, averageScore: number, totalEpisodesWatched: number, totalCount: number}>}
- */
 export async function getLibraryStats(signal) {
     const res = await fetch(`${API_BASE}/stats`, { signal });
     if (!res.ok) {
@@ -95,11 +60,6 @@ export async function getLibraryStats(signal) {
     return res.json();
 }
 
-/**
- * Fetches user profile from backend.
- * @param {AbortSignal} [signal]
- * @returns {Promise<{id: string, username: string, avatar_url: string, bio: string}>}
- */
 export async function getUserProfile(signal) {
     const res = await fetch(`${API_BASE}/profile`, { signal });
     if (!res.ok) {
@@ -108,15 +68,6 @@ export async function getUserProfile(signal) {
     return res.json();
 }
 
-/**
- * Updates user profile.
- * @param {Object} profileData
- * @param {string} [profileData.username]
- * @param {string} [profileData.avatar_url]
- * @param {string} [profileData.bio]
- * @param {AbortSignal} [signal]
- * @returns {Promise<Object>}
- */
 export async function saveUserProfile(profileData, signal) {
     const res = await fetch(`${API_BASE}/profile`, {
         method: 'POST',

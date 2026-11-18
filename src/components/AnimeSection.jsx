@@ -9,6 +9,7 @@ import { animeApiClient } from "../services/index.js";
 function AnimeSection({
     animeList = [],
     currentPage = 1,
+    pageSize = 12,
     onPageChange,
     sort = '-averageRating',
     onSortChange,
@@ -136,7 +137,7 @@ function AnimeSection({
                 </div>
 
                 {loading ? (
-                    <AnimeListSkeleton count={12} />
+                    <AnimeListSkeleton count={pageSize} />
                 ) : (
                     <div className="Anime-list-section">
                         {animeList.map((anime) => (
@@ -167,10 +168,10 @@ function AnimeSection({
                         </span>
                         <button
                             className="Pagination-btn"
-                            disabled={loading || animeList.length < 12}
+                            disabled={loading || animeList.length < pageSize}
                             onClick={() => onPageChange(currentPage + 1)}
                         >
-                            Наступна (+12) →
+                            Наступна (+{pageSize}) →
                         </button>
                     </div>
                 )}

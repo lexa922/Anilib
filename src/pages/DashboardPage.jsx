@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import CardSection from '../components/CardSection.jsx';
 import AnimeSection from '../components/AnimeSection.jsx';
+import DashboardSkeleton from '../components/DashboardSkeleton.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import ErrorDisplay from '../components/ErrorDisplay.jsx';
 import { useAnimeQuery } from '../hooks/index.js';
@@ -22,12 +23,15 @@ export function DashboardPage() {
         sort,
         onSortChange,
         currentPage,
-        onPageChange
+        onPageChange,
+        pageSize
     } = useAnimeQuery();
 
     const kpiData = useMemo(() => {
         return calculateKpis(globalAnimeList);
     }, [globalAnimeList]);
+
+    const isInitialLoad = loading && animeList.length === 0 && globalAnimeList.length === 0;
 
     return (
         <div className="Dashboard-page">
@@ -44,6 +48,8 @@ export function DashboardPage() {
             >
                 {error ? (
                     <ErrorDisplay error={error} onRetry={refetch} />
+                ) : isInitialLoad ? (
+                    <DashboardSkeleton pageSize={pageSize} />
                 ) : (
                     <>
                         <CardSection
@@ -54,6 +60,7 @@ export function DashboardPage() {
                         <AnimeSection
                             animeList={animeList}
                             currentPage={currentPage}
+                            pageSize={pageSize}
                             onPageChange={onPageChange}
                             sort={sort}
                             onSortChange={onSortChange}

@@ -24,7 +24,7 @@ export function sortAnime(animeList = [], sort = '-averageRating') {
         case 'startDate':
             return copy.sort((a, b) => Number(a.year || 0) - Number(b.year || 0));
         case '-userCount':
-            return copy.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+            return copy.sort((a, b) => Number(b.userCount || 0) - Number(a.userCount || 0));
         default:
             return copy;
     }

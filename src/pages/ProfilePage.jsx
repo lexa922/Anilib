@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useProfile } from '../context/index.js';
+import { useProfile, useRatings } from '../context/index.js';
 import { userLibraryService } from '../api/userLibraryService.js';
-import useFetch from '../hooks/useFetch.js';
+import { useFetch, useFeedback } from '../hooks/index.js';
 import KpiCard from '../components/KpiCard.jsx';
 import './ProfilePage.css';
 
@@ -25,6 +25,7 @@ const STATUS_LABELS = {
 export function ProfilePage() {
     const navigate = useNavigate();
     const { profile, updateProfile } = useProfile();
+    const { resetRating } = useRatings();
 
     // Profile form state with render-time sync
     const [prevProfile, setPrevProfile] = useState(profile);
@@ -32,7 +33,7 @@ export function ProfilePage() {
     const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
     const [bio, setBio] = useState(profile.bio || '');
     const [isDirty, setIsDirty] = useState(false);
-    const [saveFeedback, setSaveFeedback] = useState(null);
+    const [saveFeedback, showSaveFeedback] = useFeedback();
     const [isSaving, setIsSaving] = useState(false);
 
     if (prevProfile !== profile) {
@@ -92,7 +93,7 @@ export function ProfilePage() {
         e.preventDefault();
         const trimmedName = username.trim();
         if (!trimmedName) {
-            setSaveFeedback({ message: "Ім'я користувача не може бути порожнім", isError: true });
+            showSaveFeedback("Ім'я користувача не може бути порожнім", true, false);
             return;
         }
 
@@ -104,13 +105,13 @@ export function ProfilePage() {
                 bio: bio.trim()
             });
             setIsDirty(false);
-            setSaveFeedback({ message: '✓ Профіль успішно збережено в базі даних!', isError: false });
-            setTimeout(() => setSaveFeedback(null), 3500);
+            showSaveFeedback('✓ Профіль успішно збережено в базі даних!', false);
         } catch (err) {
-            setSaveFeedback({
-                message: err.message || 'Не вдалося зберегти профіль на сервері (перевірте npm run server)',
-                isError: true
-            });
+            showSaveFeedback(
+                err.message || 'Не вдалося зберегти профіль на сервері (перевірте npm run server)',
+                true,
+                false
+            );
         } finally {
             setIsSaving(false);
         }
@@ -122,6 +123,7 @@ export function ProfilePage() {
         if (!window.confirm('Видалити цей тайтл з вашої бібліотеки?')) return;
         try {
             await userLibraryService.deleteLibraryEntry(itemId);
+            resetRating(itemId);
             refetchLibrary();
             refetchStats();
         } catch (err) {

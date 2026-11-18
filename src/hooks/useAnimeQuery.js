@@ -25,13 +25,18 @@ export function useAnimeQuery(initialOptions = {}) {
     const [currentPage, setCurrentPage] = useState(urlParams.page || 1);
 
     const fetchExecutor = useCallback((signal) => {
-        return animeApiClient.getTopAnime({
-            query: debouncedSearchQuery,
-            ...filters,
-            sort,
-            page: currentPage,
-            limit
-        }, signal);
+        return animeApiClient.getAnimePage(
+            {
+                query: debouncedSearchQuery,
+                ...filters,
+                sort
+            },
+            {
+                page: currentPage,
+                limit
+            },
+            signal
+        );
     }, [debouncedSearchQuery, filters, sort, currentPage, limit]);
 
     const { data, loading, error, refetch } = useFetch(
@@ -47,7 +52,6 @@ export function useAnimeQuery(initialOptions = {}) {
     useEffect(() => {
         updateUrlParams({
             query: debouncedSearchQuery,
-            category: filters.genres && filters.genres.length > 0 ? filters.genres.join(',') : 'all',
             status: filters.status,
             yearFrom: filters.yearFrom,
             yearTo: filters.yearTo,
@@ -104,6 +108,7 @@ export function useAnimeQuery(initialOptions = {}) {
         sort,
         onSortChange: handleSortChange,
         currentPage,
-        onPageChange: handlePageChange
+        onPageChange: handlePageChange,
+        pageSize: limit
     };
 }
