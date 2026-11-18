@@ -6,7 +6,6 @@ const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 
-// Basic CORS header support for local testing/development
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -19,7 +18,6 @@ app.use((req, res, next) => {
 
 const VALID_STATUSES = ['watching', 'completed', 'dropped', 'plan_to_watch'];
 
-// GET /api/library: Returns all saved entries sorted by updated_at DESC
 app.get('/api/library', (req, res) => {
     try {
         const rows = db.prepare('SELECT * FROM user_library ORDER BY updated_at DESC').all();
@@ -30,7 +28,6 @@ app.get('/api/library', (req, res) => {
     }
 });
 
-// GET /api/stats: Computes aggregates directly via SQL
 app.get('/api/stats', (req, res) => {
     try {
         const stats = db.prepare(`
@@ -47,7 +44,6 @@ app.get('/api/stats', (req, res) => {
     }
 });
 
-// GET /api/profile: Returns current user profile
 app.get('/api/profile', (req, res) => {
     try {
         let profile = db.prepare('SELECT * FROM user_profile WHERE id = ?').get('default');
@@ -65,7 +61,6 @@ app.get('/api/profile', (req, res) => {
     }
 });
 
-// POST /api/profile: Updates current user profile
 app.post('/api/profile', (req, res) => {
     try {
         const { username, avatar_url, bio } = req.body || {};
@@ -105,7 +100,6 @@ app.post('/api/profile', (req, res) => {
     }
 });
 
-// GET /api/library/:id: Returns single entry by anime ID (or 404 if not in library)
 app.get('/api/library/:id', (req, res) => {
     try {
         const { id } = req.params;
@@ -120,7 +114,6 @@ app.get('/api/library/:id', (req, res) => {
     }
 });
 
-// POST /api/library/:id: Upsert entry (id, title, user_score, status, episodes_watched, notes)
 app.post('/api/library/:id', (req, res) => {
     try {
         const { id } = req.params;
@@ -202,7 +195,6 @@ app.post('/api/library/:id', (req, res) => {
     }
 });
 
-// DELETE /api/library/:id: Removes record from user's database
 app.delete('/api/library/:id', (req, res) => {
     try {
         const { id } = req.params;

@@ -25,13 +25,18 @@ export function useAnimeQuery(initialOptions = {}) {
     const [currentPage, setCurrentPage] = useState(urlParams.page || 1);
 
     const fetchExecutor = useCallback((signal) => {
-        return animeApiClient.getTopAnime({
-            query: debouncedSearchQuery,
-            ...filters,
-            sort,
-            page: currentPage,
-            limit
-        }, signal);
+        return animeApiClient.getAnimePage(
+            {
+                query: debouncedSearchQuery,
+                ...filters,
+                sort
+            },
+            {
+                page: currentPage,
+                limit
+            },
+            signal
+        );
     }, [debouncedSearchQuery, filters, sort, currentPage, limit]);
 
     const { data, loading, error, refetch } = useFetch(

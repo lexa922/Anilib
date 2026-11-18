@@ -4,3 +4,5 @@ export { createKitsuAnimeStrategy } from './KitsuAnimeStrategy.js';
 export { createJikanAnimeStrategy } from './JikanAnimeStrategy.js';
 export { createAnimeApiClient, animeApiClient } from './animeApiClient.js';
 export { sortAnime, resolveServerSort, ALLOWED_SORT_KEYS } from './animeSorting.js';
+export { parseFilterParams, buildKitsuFilterQuery, filterByGenres, filterAnimeList } from './animeFiltering.js';
+export { normalizePagination, paginateAnime } from './animePagination.js';
