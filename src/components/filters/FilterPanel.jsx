@@ -51,11 +51,22 @@ export function FilterPanel({
     onReset,
     disabled = false
 }) {
+    const initialKey = `${initialGenres.join(',')}|${initialStatus}|${initialYearFrom}|${initialYearTo}`;
+    const [prevInitialKey, setPrevInitialKey] = useState(initialKey);
     const [draftGenres, setDraftGenres] = useState(initialGenres);
     const [draftStatus, setDraftStatus] = useState(initialStatus);
     const [draftYearFrom, setDraftYearFrom] = useState(initialYearFrom);
     const [draftYearTo, setDraftYearTo] = useState(initialYearTo);
     const [yearError, setYearError] = useState(null);
+
+    if (prevInitialKey !== initialKey) {
+        setPrevInitialKey(initialKey);
+        setDraftGenres(initialGenres);
+        setDraftStatus(initialStatus);
+        setDraftYearFrom(initialYearFrom);
+        setDraftYearTo(initialYearTo);
+        setYearError(null);
+    }
 
     const handleGenreToggle = (genreName) => {
         setDraftGenres((prev) =>

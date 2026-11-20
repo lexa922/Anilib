@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useRatings } from '../context/index.js';
+import { ANIME_STATUS_LABELS } from '../constants/filterConstants.js';
 import "./AnimeCard.css";
 
 function AnimeCard({ anime }) {
@@ -7,13 +8,7 @@ function AnimeCard({ anime }) {
     const userRating = getRating(anime.id);
     const posterUrl = anime.poster || anime.images?.jpg?.image_url;
 
-    const statusMap = {
-        current: 'Онґоїнґ',
-        finished: 'Завершено',
-        upcoming: 'Анонс',
-        unreleased: 'Анонс'
-    };
-    const statusText = statusMap[(anime.status || '').toLowerCase()] || anime.status;
+    const statusText = ANIME_STATUS_LABELS[(anime.status || '').toLowerCase()] || anime.status;
 
     return (
         <Link to={`/anime/${anime.id}`} className="Anime-card-link">

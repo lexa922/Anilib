@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { animeApiClient } from '../services/index.js';
 import { useUrlParams } from './useUrlParams.js';
 import { useDebounce } from './useDebounce.js';
@@ -44,11 +44,6 @@ export function useAnimeQuery(initialOptions = {}) {
         [debouncedSearchQuery, filters, sort, currentPage, limit]
     );
 
-    const globalAnimeList = useMemo(() => {
-        const all = animeApiClient.getAllLoadedAnime();
-        return all.length > 0 ? all : (data || []);
-    }, [data]);
-
     useEffect(() => {
         updateUrlParams({
             query: debouncedSearchQuery,
@@ -62,20 +57,17 @@ export function useAnimeQuery(initialOptions = {}) {
     }, [debouncedSearchQuery, filters, sort, currentPage, updateUrlParams]);
 
     const handleSearchChange = useCallback((newQuery) => {
-        animeApiClient.clearCache();
         setSearchQuery(newQuery);
         setCurrentPage(1);
     }, []);
 
     const handleFiltersChange = useCallback((newFilters) => {
-        animeApiClient.clearCache();
         setFilters(newFilters);
         setCurrentPage(1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
 
     const handleResetFilters = useCallback(() => {
-        animeApiClient.clearCache();
         setFilters(INITIAL_FILTERS);
         setSearchQuery(DEFAULT_SEARCH_QUERY);
         setCurrentPage(1);
@@ -96,7 +88,6 @@ export function useAnimeQuery(initialOptions = {}) {
 
     return {
         data: data || [],
-        globalAnimeList,
         loading,
         error,
         refetch,

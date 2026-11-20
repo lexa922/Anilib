@@ -13,6 +13,17 @@ export function createAnimeSourceStrategy() {
         async getTopAnime(filters = {}, signal = null) {
             return this.getAnime({ ...filters, sort: '-averageRating' }, signal);
         },
+        async streamAllAnimeStats({ onBatch, signal } = {}) {
+            const list = await this.getAnime({}, signal);
+            if (typeof onBatch === 'function') {
+                onBatch({
+                    items: list,
+                    processedCount: list.length,
+                    totalCount: list.length
+                });
+            }
+            return { completed: true, totalCount: list.length };
+        },
         filterAnime(animeList, filters) {
             return filterAnimeList(animeList, filters);
         },

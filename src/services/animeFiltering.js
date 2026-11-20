@@ -28,13 +28,24 @@ export function parseFilterParams(params = {}) {
     };
 }
 
+function toKitsuCategorySlug(genre) {
+    return String(genre)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
 export function buildKitsuFilterQuery(filters, queryParams) {
     if (filters.textQuery) {
         queryParams.set('filter[text]', filters.textQuery);
     }
 
     if (filters.genres.length > 0) {
-        queryParams.set('filter[categories]', filters.genres.join(','));
+        const slugs = filters.genres.map(toKitsuCategorySlug).filter(Boolean);
+        if (slugs.length > 0) {
+            queryParams.set('filter[categories]', slugs.join(','));
+        }
     }
 
     if (filters.status) {
@@ -59,12 +70,18 @@ export function filterByGenres(animeList = [], genres = []) {
         return animeList || [];
     }
 
-    const targetGenres = genres.map((g) => g.toLowerCase());
+    const targetTokens = genres.map((g) => toKitsuCategorySlug(g));
     return animeList.filter((anime) => {
-        const names = (anime.genres || []).map((g) =>
-            (typeof g === 'string' ? g : g.name || '').toLowerCase()
-        );
-        return targetGenres.every((sg) => names.includes(sg));
+        const itemTokens = new Set();
+        (anime.genres || []).forEach((g) => {
+            if (typeof g === 'string') {
+                itemTokens.add(toKitsuCategorySlug(g));
+            } else if (g) {
+                if (g.name) itemTokens.add(toKitsuCategorySlug(g.name));
+                if (g.slug) itemTokens.add(toKitsuCategorySlug(g.slug));
+            }
+        });
+        return targetTokens.every((token) => itemTokens.has(token));
     });
 }
 

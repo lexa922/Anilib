@@ -45,6 +45,18 @@ export function createMockAnimeStrategy(mockData = MOCK_ANIME_LIST) {
             return this.getAnime({ ...filters, sort: '-averageRating' }, signal);
         },
 
+        async streamAllAnimeStats({ onBatch, signal } = {}) {
+            const list = await this.getAnime({}, signal);
+            if (typeof onBatch === 'function') {
+                onBatch({
+                    items: list,
+                    processedCount: list.length,
+                    totalCount: list.length
+                });
+            }
+            return { completed: true, totalCount: list.length };
+        },
+
         async getAnimeById(id) {
             const found = mockData.find((a) => String(a.id) === String(id));
             if (!found) {

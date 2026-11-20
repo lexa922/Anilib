@@ -3,8 +3,9 @@ import AnimeCard from './AnimeCard';
 import AnimeListSkeleton from './AnimeListSkeleton';
 import SortControl from './SortControl';
 import FilterPanel from './filters/FilterPanel.jsx';
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef, useCallback } from "react";
 import { animeApiClient } from "../services/index.js";
+import { useFetch } from "../hooks/index.js";
 
 function AnimeSection({
     animeList = [],
@@ -20,23 +21,13 @@ function AnimeSection({
     onResetFilters,
     loading = false
 }) {
-    const [categories, setCategories] = useState([]);
-
-    useEffect(() => {
-        let isMounted = true;
-        animeApiClient.getCategories().then((cats) => {
-            if (isMounted && Array.isArray(cats)) {
-                setCategories(cats);
-            }
-        }).catch((err) => {
-            console.error('Failed to load categories:', err);
-        });
-        return () => {
-            isMounted = false;
-        };
+    const fetchCategories = useCallback((signal) => {
+        return animeApiClient.getCategories(40, signal);
     }, []);
+    const { data: categoriesData } = useFetch(fetchCategories, []);
 
     const allAvailableGenres = useMemo(() => {
+        const categories = Array.isArray(categoriesData) ? categoriesData : [];
         const set = new Set();
         categories.forEach((cat) => {
             const name = typeof cat === 'string' ? cat : (cat.title || cat.name || cat.slug);
@@ -49,7 +40,7 @@ function AnimeSection({
             });
         });
         return Array.from(set).sort();
-    }, [categories, animeList]);
+    }, [categoriesData, animeList]);
 
     const isFiltered = Boolean(
         (searchQuery && searchQuery.trim()) ||
@@ -58,8 +49,6 @@ function AnimeSection({
         filters.yearFrom ||
         filters.yearTo
     );
-
-    const filterKey = `${(filters.genres || []).join(',')}|${filters.status || 'all'}|${filters.yearFrom || ''}|${filters.yearTo || ''}`;
 
     const searchInputRef = useRef(null);
 
@@ -178,7 +167,6 @@ function AnimeSection({
             </div>
 
             <FilterPanel
-                key={filterKey}
                 initialGenres={filters.genres || []}
                 initialStatus={filters.status || 'all'}
                 initialYearFrom={filters.yearFrom || ''}
