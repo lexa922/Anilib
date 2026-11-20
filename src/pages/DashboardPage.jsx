@@ -5,11 +5,11 @@ import AnimeSection from '../components/AnimeSection.jsx';
 import DashboardSkeleton from '../components/DashboardSkeleton.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import ErrorDisplay from '../components/ErrorDisplay.jsx';
-import { useAnimeQuery, useGlobalCatalogCache } from '../hooks/index.js';
+import { useAnimeQuery, useDebounce, useGlobalCatalogCache } from '../hooks/index.js';
 import { filterAnimeList } from '../services/animeFiltering.js';
 import { isValidYearString, validateYears } from '../constants/filterConstants.js';
 import { calculateKpis } from '../utils/kpi.js';
-import { useDashboardStore, selectFilters, selectHasActiveFilters } from '../store/index.js';
+import { useDashboardStore, selectFilters } from '../store/index.js';
 import './DashboardPage.css';
 
 export function DashboardPage() {
@@ -33,24 +33,35 @@ export function DashboardPage() {
     } = useGlobalCatalogCache();
 
     const filters = useDashboardStore(selectFilters);
-    const hasActiveFilters = useDashboardStore(selectHasActiveFilters);
+    const debouncedQuery = useDebounce(filters.query, 400);
+
+    const yearValidationError = useMemo(
+        () => validateYears(filters.yearFrom, filters.yearTo),
+        [filters.yearFrom, filters.yearTo]
+    );
+    const hasYearOrderError = yearValidationError?.field === 'both';
+    const effectiveYearFrom = !hasYearOrderError && isValidYearString(filters.yearFrom)
+        ? String(filters.yearFrom).trim()
+        : '';
+    const effectiveYearTo = !hasYearOrderError && isValidYearString(filters.yearTo)
+        ? String(filters.yearTo).trim()
+        : '';
+
+    const hasEffectiveFilters = Boolean(
+        debouncedQuery.trim() ||
+        filters.genres.length > 0 ||
+        (filters.status && filters.status !== 'all') ||
+        effectiveYearFrom ||
+        effectiveYearTo
+    );
 
     const analyticsItems = useMemo(() => {
-        if (!hasActiveFilters) {
+        if (!hasEffectiveFilters) {
             return catalogItems.length > 0 ? catalogItems : animeList;
         }
 
-        const yearValidationError = validateYears(filters.yearFrom, filters.yearTo);
-        const hasYearOrderError = yearValidationError?.field === 'both';
-        const effectiveYearFrom = !hasYearOrderError && isValidYearString(filters.yearFrom)
-            ? String(filters.yearFrom).trim()
-            : '';
-        const effectiveYearTo = !hasYearOrderError && isValidYearString(filters.yearTo)
-            ? String(filters.yearTo).trim()
-            : '';
-
         const matched = filterAnimeList(catalogItems, {
-            query: filters.query,
+            query: debouncedQuery,
             genres: filters.genres,
             status: filters.status,
             yearFrom: effectiveYearFrom,
@@ -69,9 +80,21 @@ export function DashboardPage() {
             }
         }
         return merged;
-    }, [hasActiveFilters, catalogItems, animeList, filters]);
+    }, [
+        hasEffectiveFilters,
+        catalogItems,
+        animeList,
+        debouncedQuery,
+        filters.genres,
+        filters.status,
+        effectiveYearFrom,
+        effectiveYearTo
+    ]);
 
-    const filteredKpis = useMemo(() => calculateKpis(analyticsItems), [analyticsItems]);
+    const filteredKpis = useMemo(
+        () => (hasEffectiveFilters ? calculateKpis(analyticsItems) : null),
+        [hasEffectiveFilters, analyticsItems]
+    );
 
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     if (!loading && !hasLoadedOnce) {
@@ -80,7 +103,7 @@ export function DashboardPage() {
 
     const isInitialLoad = loading && !hasLoadedOnce;
 
-    const cardSectionSubtitle = hasActiveFilters
+    const cardSectionSubtitle = hasEffectiveFilters
         ? `Відфільтровано з кешу Kitsu: ${analyticsItems.length.toLocaleString('uk-UA')} тайтлів`
         : null;
 
@@ -104,7 +127,7 @@ export function DashboardPage() {
                 ) : (
                     <>
                         <CardSection
-                            kpiData={hasActiveFilters ? filteredKpis : globalKpiData}
+                            kpiData={hasEffectiveFilters ? filteredKpis : globalKpiData}
                             processedCount={processedCount}
                             totalCount={totalCount}
                             isStreaming={isStreaming}
@@ -120,6 +143,7 @@ export function DashboardPage() {
                             isStreaming={isStreaming}
                             isComplete={isComplete}
                             rateLimited={rateLimited}
+                            hasActiveFilters={hasEffectiveFilters}
                             onRefreshCache={refreshCatalogCache}
                         />
 

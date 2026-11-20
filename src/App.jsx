@@ -1,10 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Toggle from './components/Toggle';
 import { RatingProvider, ProfileProvider, useProfile } from './context/index.js';
 import { useDashboardStore, selectTheme, selectFavoritesCount } from './store/index.js';
-import { DashboardPage, AnimeDetailPage, ProfilePage, NotFoundPage } from './pages/index.js';
 import "./App.css";
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
+const AnimeDetailPage = lazy(() => import('./pages/AnimeDetailPage.jsx'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'));
 
 function AppHeader() {
     const { profile } = useProfile();
@@ -80,12 +84,20 @@ export function App() {
                             <AppHeader />
 
                             <main className="app-main">
-                                <Routes>
-                                    <Route path="/" element={<DashboardPage />} />
-                                    <Route path="/anime/:id" element={<AnimeDetailPage />} />
-                                    <Route path="/profile" element={<ProfilePage />} />
-                                    <Route path="*" element={<NotFoundPage />} />
-                                </Routes>
+                                <Suspense
+                                    fallback={
+                                        <div className="app-route-loading" role="status" aria-live="polite">
+                                            Завантаження сторінки...
+                                        </div>
+                                    }
+                                >
+                                    <Routes>
+                                        <Route path="/" element={<DashboardPage />} />
+                                        <Route path="/anime/:id" element={<AnimeDetailPage />} />
+                                        <Route path="/profile" element={<ProfilePage />} />
+                                        <Route path="*" element={<NotFoundPage />} />
+                                    </Routes>
+                                </Suspense>
                             </main>
                         </div>
                     </ProfileProvider>

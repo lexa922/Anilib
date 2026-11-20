@@ -7,7 +7,7 @@ import {
 } from '../utils/kpi.js';
 import {
     readCatalogCache,
-    writeCatalogCache,
+    appendCatalogItems,
     clearCatalogCache
 } from '../utils/catalogCacheDb.js';
 
@@ -15,6 +15,7 @@ const NOTIFY_THROTTLE_MS = 600;
 const PERSIST_BATCH_STEP = 500;
 
 let itemsById = new Map();
+const pendingPersistById = new Map();
 let accumulator = createKpiAccumulator();
 let currentTotalCount = 0;
 let currentNextOffset = 0;
@@ -25,7 +26,6 @@ let currentCacheReady = false;
 
 let activeInitPromise = null;
 let activeStreamController = null;
-let lastPersistCount = 0;
 let lastNotifyTime = 0;
 let notifyTimeoutId = null;
 
@@ -147,7 +147,7 @@ function toCompactCatalogItem(raw) {
     };
 }
 
-function addItemsToStore(incomingItems = []) {
+function addItemsToStore(incomingItems = [], trackForPersist = true) {
     if (!Array.isArray(incomingItems) || incomingItems.length === 0) return 0;
 
     const newlyAdded = [];
@@ -159,12 +159,15 @@ function addItemsToStore(incomingItems = []) {
         if (!existing) {
             itemsById.set(compact.id, compact);
             newlyAdded.push(compact);
+            if (trackForPersist) {
+                pendingPersistById.set(compact.id, compact);
+            }
         } else if (
             (compact.poster && !existing.poster) ||
             (compact.favoritesCount > 0 && !existing.favoritesCount) ||
             (compact.ageRating && !existing.ageRating)
         ) {
-            itemsById.set(compact.id, {
+            const enriched = {
                 ...existing,
                 poster: existing.poster || compact.poster,
                 startDate: existing.startDate || compact.startDate,
@@ -172,7 +175,11 @@ function addItemsToStore(incomingItems = []) {
                 episodes: existing.episodes ?? compact.episodes,
                 episodeLength: existing.episodeLength ?? compact.episodeLength,
                 ageRating: existing.ageRating || compact.ageRating
-            });
+            };
+            itemsById.set(compact.id, enriched);
+            if (trackForPersist) {
+                pendingPersistById.set(compact.id, enriched);
+            }
         }
     }
 
@@ -181,6 +188,20 @@ function addItemsToStore(incomingItems = []) {
     }
 
     return newlyAdded.length;
+}
+
+async function flushPendingPersist(isComplete) {
+    if (pendingPersistById.size === 0 && !isComplete) {
+        return;
+    }
+    const batch = Array.from(pendingPersistById.values());
+    pendingPersistById.clear();
+
+    await appendCatalogItems(batch, {
+        totalCount: currentTotalCount,
+        nextOffset: currentNextOffset,
+        isComplete
+    });
 }
 
 export function mergeCatalogItems(normalizedItems = []) {
@@ -204,11 +225,10 @@ function ensureCatalogInitialized() {
                 const preExisting = Array.from(itemsById.values());
                 itemsById = new Map();
                 accumulator = createKpiAccumulator();
-                addItemsToStore(cached.items);
+                addItemsToStore(cached.items, false);
                 if (preExisting.length > 0) {
-                    addItemsToStore(preExisting);
+                    addItemsToStore(preExisting, true);
                 }
-                lastPersistCount = accumulator.totalCount;
 
                 currentTotalCount = Math.max(cached.totalCount || 0, accumulator.totalCount);
                 currentNextOffset = Number(cached.nextOffset) || 0;
@@ -239,7 +259,7 @@ function ensureCatalogInitialized() {
                 onBatch: ({ items, totalCount, nextOffset }) => {
                     if (controller.signal.aborted) return;
 
-                    const addedCount = addItemsToStore(items);
+                    addItemsToStore(items, true);
                     if (typeof totalCount === 'number' && totalCount > 0) {
                         currentTotalCount = totalCount;
                     }
@@ -247,14 +267,8 @@ function ensureCatalogInitialized() {
                         currentNextOffset = nextOffset;
                     }
 
-                    if (addedCount > 0 && accumulator.totalCount - lastPersistCount >= PERSIST_BATCH_STEP) {
-                        lastPersistCount = accumulator.totalCount;
-                        writeCatalogCache({
-                            items: Array.from(itemsById.values()),
-                            totalCount: currentTotalCount,
-                            nextOffset: currentNextOffset,
-                            isComplete: false
-                        });
+                    if (pendingPersistById.size >= PERSIST_BATCH_STEP) {
+                        flushPendingPersist(false);
                     }
 
                     scheduleNotify(false);
@@ -276,13 +290,7 @@ function ensureCatalogInitialized() {
             }
 
             if (itemsById.size > 0) {
-                lastPersistCount = accumulator.totalCount;
-                await writeCatalogCache({
-                    items: Array.from(itemsById.values()),
-                    totalCount: currentTotalCount,
-                    nextOffset: currentNextOffset,
-                    isComplete: currentIsComplete
-                });
+                await flushPendingPersist(currentIsComplete);
             }
 
             flushSnapshot();
@@ -290,12 +298,7 @@ function ensureCatalogInitialized() {
             if (err?.name !== 'AbortError') {
                 currentIsStreaming = false;
                 if (itemsById.size > 0) {
-                    await writeCatalogCache({
-                        items: Array.from(itemsById.values()),
-                        totalCount: currentTotalCount,
-                        nextOffset: currentNextOffset,
-                        isComplete: false
-                    });
+                    await flushPendingPersist(false);
                 }
                 flushSnapshot();
             }
@@ -318,6 +321,7 @@ export async function refreshCatalogCache() {
     activeInitPromise = null;
 
     itemsById = new Map();
+    pendingPersistById.clear();
     accumulator = createKpiAccumulator();
     currentTotalCount = 0;
     currentNextOffset = 0;
@@ -325,7 +329,6 @@ export async function refreshCatalogCache() {
     currentIsComplete = false;
     currentRateLimited = false;
     currentCacheReady = true;
-    lastPersistCount = 0;
 
     await clearCatalogCache();
     flushSnapshot();

@@ -1,7 +1,8 @@
 const DB_NAME = 'anilib_catalog_cache_db';
-const DB_VERSION = 1;
-const STORE_NAME = 'snapshots';
-const CACHE_KEY = 'kitsu_full_catalog_v3';
+const DB_VERSION = 2;
+const ITEMS_STORE = 'items';
+const META_STORE = 'meta';
+const META_KEY = 'kitsu_full_catalog_v3';
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 function openCacheDb() {
@@ -16,22 +17,20 @@ function openCacheDb() {
 
             request.onupgradeneeded = () => {
                 const db = request.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME);
+                if (db.objectStoreNames.contains('snapshots')) {
+                    db.deleteObjectStore('snapshots');
+                }
+                if (!db.objectStoreNames.contains(ITEMS_STORE)) {
+                    db.createObjectStore(ITEMS_STORE, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains(META_STORE)) {
+                    db.createObjectStore(META_STORE);
                 }
             };
 
-            request.onsuccess = () => {
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                resolve(null);
-            };
-
-            request.onblocked = () => {
-                resolve(null);
-            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => resolve(null);
+            request.onblocked = () => resolve(null);
         } catch {
             resolve(null);
         }
@@ -44,28 +43,44 @@ export async function readCatalogCache() {
 
     return new Promise((resolve) => {
         try {
-            const tx = db.transaction(STORE_NAME, 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const request = store.get(CACHE_KEY);
+            const tx = db.transaction([META_STORE, ITEMS_STORE], 'readonly');
+            const metaReq = tx.objectStore(META_STORE).get(META_KEY);
+            const itemsReq = tx.objectStore(ITEMS_STORE).getAll();
 
-            request.onsuccess = () => {
-                const record = request.result;
-                db.close();
+            let metaRecord = null;
+            let items = null;
 
-                if (!record || !Array.isArray(record.items)) {
-                    resolve(null);
-                    return;
-                }
-
-                if (Date.now() - (record.timestamp || 0) > CACHE_TTL_MS) {
-                    resolve(null);
-                    return;
-                }
-
-                resolve(record);
+            metaReq.onsuccess = () => {
+                metaRecord = metaReq.result;
+            };
+            itemsReq.onsuccess = () => {
+                items = itemsReq.result;
             };
 
-            request.onerror = () => {
+            tx.oncomplete = () => {
+                db.close();
+                if (!metaRecord || !Array.isArray(items) || items.length === 0) {
+                    resolve(null);
+                    return;
+                }
+                if (Date.now() - (metaRecord.timestamp || 0) > CACHE_TTL_MS) {
+                    resolve(null);
+                    return;
+                }
+                resolve({
+                    items,
+                    totalCount: Number(metaRecord.totalCount) || 0,
+                    nextOffset: Number(metaRecord.nextOffset) || 0,
+                    isComplete: Boolean(metaRecord.isComplete),
+                    timestamp: metaRecord.timestamp
+                });
+            };
+
+            tx.onerror = () => {
+                db.close();
+                resolve(null);
+            };
+            tx.onabort = () => {
                 db.close();
                 resolve(null);
             };
@@ -76,23 +91,32 @@ export async function readCatalogCache() {
     });
 }
 
-export async function writeCatalogCache(payload) {
+export async function appendCatalogItems(batchItems = [], meta = {}) {
     const db = await openCacheDb();
     if (!db) return;
 
     return new Promise((resolve) => {
         try {
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            store.put(
+            const tx = db.transaction([ITEMS_STORE, META_STORE], 'readwrite');
+            const itemsStore = tx.objectStore(ITEMS_STORE);
+            const metaStore = tx.objectStore(META_STORE);
+
+            if (Array.isArray(batchItems)) {
+                for (const item of batchItems) {
+                    if (item && item.id) {
+                        itemsStore.put(item);
+                    }
+                }
+            }
+
+            metaStore.put(
                 {
-                    items: Array.isArray(payload?.items) ? payload.items : [],
-                    totalCount: Number(payload?.totalCount) || 0,
-                    nextOffset: Number(payload?.nextOffset) || 0,
-                    isComplete: Boolean(payload?.isComplete),
+                    totalCount: Number(meta.totalCount) || 0,
+                    nextOffset: Number(meta.nextOffset) || 0,
+                    isComplete: Boolean(meta.isComplete),
                     timestamp: Date.now()
                 },
-                CACHE_KEY
+                META_KEY
             );
 
             tx.oncomplete = () => {
@@ -120,9 +144,9 @@ export async function clearCatalogCache() {
 
     return new Promise((resolve) => {
         try {
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            store.delete(CACHE_KEY);
+            const tx = db.transaction([ITEMS_STORE, META_STORE], 'readwrite');
+            tx.objectStore(ITEMS_STORE).clear();
+            tx.objectStore(META_STORE).delete(META_KEY);
 
             tx.oncomplete = () => {
                 db.close();

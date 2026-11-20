@@ -36,11 +36,13 @@ export function AnalyticsChartSection({
     isStreaming = false,
     isComplete = false,
     rateLimited = false,
+    hasActiveFilters: hasActiveFiltersProp,
     onRefreshCache = null
 }) {
     const chartType = useDashboardStore(selectChartType);
     const chartGroupBy = useDashboardStore(selectChartGroupBy);
-    const hasActiveFilters = useDashboardStore(selectHasActiveFilters);
+    const storeHasActiveFilters = useDashboardStore(selectHasActiveFilters);
+    const hasActiveFilters = hasActiveFiltersProp !== undefined ? hasActiveFiltersProp : storeHasActiveFilters;
 
     const setChartType = useDashboardStore((state) => state.setChartType);
     const setChartGroupBy = useDashboardStore((state) => state.setChartGroupBy);
