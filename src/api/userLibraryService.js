@@ -39,6 +39,25 @@ export async function saveLibraryEntry(id, data, signal) {
     return res.json();
 }
 
+export async function updateLibraryMetadata(id, metadata, signal) {
+    if (!id) {
+        throw new Error('Anime ID is required to update library metadata');
+    }
+    const res = await fetch(`${API_BASE}/library/${encodeURIComponent(id)}/metadata`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(metadata),
+        signal
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to update library metadata: ${res.status}`);
+    }
+    return res.json();
+}
+
 export async function deleteLibraryEntry(id, signal) {
     if (!id) return null;
     const res = await fetch(`${API_BASE}/library/${encodeURIComponent(id)}`, {
@@ -88,6 +107,7 @@ export const userLibraryService = {
     getLibrary,
     getLibraryEntry,
     saveLibraryEntry,
+    updateLibraryMetadata,
     deleteLibraryEntry,
     getLibraryStats,
     getUserProfile,

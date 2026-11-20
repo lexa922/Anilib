@@ -1,34 +1,88 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { animeApiClient } from '../services/index.js';
-import { useUrlParams } from './useUrlParams.js';
+import { parseUrlParams, useUrlParams } from './useUrlParams.js';
 import { useDebounce } from './useDebounce.js';
 import { useFetch } from './useFetch.js';
-import { INITIAL_FILTERS, DEFAULT_SEARCH_QUERY } from '../constants/filterConstants.js';
+import { mergeCatalogItems } from './useGlobalCatalogCache.js';
+import { isValidYearString, validateYears } from '../constants/filterConstants.js';
+import {
+    useDashboardStore,
+    selectFilters,
+    selectSort,
+    selectCurrentPage
+} from '../store/index.js';
 
 const PAGE_SIZE = 12;
 
 export function useAnimeQuery(initialOptions = {}) {
     const limit = initialOptions.limit || PAGE_SIZE;
-    const [urlParams, updateUrlParams] = useUrlParams();
+    const [, updateUrlParams] = useUrlParams();
 
-    const [searchQuery, setSearchQuery] = useState(urlParams.query || DEFAULT_SEARCH_QUERY);
-    const debouncedSearchQuery = useDebounce(searchQuery, 400);
+    const filters = useDashboardStore(selectFilters);
+    const sort = useDashboardStore(selectSort);
+    const currentPage = useDashboardStore(selectCurrentPage);
 
-    const [filters, setFilters] = useState(() => ({
-        genres: urlParams.genres || INITIAL_FILTERS.genres,
-        status: urlParams.status || INITIAL_FILTERS.status,
-        yearFrom: urlParams.yearFrom || INITIAL_FILTERS.yearFrom,
-        yearTo: urlParams.yearTo || INITIAL_FILTERS.yearTo
-    }));
+    const hydratedRef = useRef(false);
+    const pendingHydrationSyncRef = useRef(false);
 
-    const [sort, setSort] = useState(urlParams.sort || '-averageRating');
-    const [currentPage, setCurrentPage] = useState(urlParams.page || 1);
+    useEffect(() => {
+        if (hydratedRef.current) return;
+        hydratedRef.current = true;
+
+        if (typeof window !== 'undefined' && window.location.search.length > 1) {
+            pendingHydrationSyncRef.current = true;
+            useDashboardStore.getState().hydrateFromUrl(parseUrlParams(window.location.search));
+        }
+    }, []);
+
+    const debouncedQuery = useDebounce(filters.query, 400);
+
+    const yearValidationError = validateYears(filters.yearFrom, filters.yearTo);
+    const hasYearOrderError = yearValidationError?.field === 'both';
+    const effectiveYearFrom = !hasYearOrderError && isValidYearString(filters.yearFrom)
+        ? String(filters.yearFrom).trim()
+        : '';
+    const effectiveYearTo = !hasYearOrderError && isValidYearString(filters.yearTo)
+        ? String(filters.yearTo).trim()
+        : '';
+
+    useEffect(() => {
+        if (pendingHydrationSyncRef.current) {
+            if (filters.query !== debouncedQuery) {
+                return;
+            }
+            pendingHydrationSyncRef.current = false;
+        }
+
+        updateUrlParams({
+            query: debouncedQuery,
+            status: filters.status,
+            yearFrom: effectiveYearFrom,
+            yearTo: effectiveYearTo,
+            genres: filters.genres,
+            sort,
+            page: currentPage
+        });
+    }, [
+        debouncedQuery,
+        filters.query,
+        filters.status,
+        filters.genres,
+        effectiveYearFrom,
+        effectiveYearTo,
+        sort,
+        currentPage,
+        updateUrlParams
+    ]);
 
     const fetchExecutor = useCallback((signal) => {
         return animeApiClient.getAnimePage(
             {
-                query: debouncedSearchQuery,
-                ...filters,
+                query: debouncedQuery,
+                genres: filters.genres,
+                status: filters.status,
+                yearFrom: effectiveYearFrom,
+                yearTo: effectiveYearTo,
                 sort
             },
             {
@@ -37,69 +91,42 @@ export function useAnimeQuery(initialOptions = {}) {
             },
             signal
         );
-    }, [debouncedSearchQuery, filters, sort, currentPage, limit]);
+    }, [
+        debouncedQuery,
+        filters.genres,
+        filters.status,
+        effectiveYearFrom,
+        effectiveYearTo,
+        sort,
+        currentPage,
+        limit
+    ]);
 
-    const { data, loading, error, refetch } = useFetch(
+    const { data: apiData, loading, error, refetch } = useFetch(
         fetchExecutor,
-        [debouncedSearchQuery, filters, sort, currentPage, limit]
+        [
+            debouncedQuery,
+            filters.status,
+            filters.genres,
+            effectiveYearFrom,
+            effectiveYearTo,
+            sort,
+            currentPage,
+            limit
+        ]
     );
 
     useEffect(() => {
-        updateUrlParams({
-            query: debouncedSearchQuery,
-            status: filters.status,
-            yearFrom: filters.yearFrom,
-            yearTo: filters.yearTo,
-            genres: filters.genres,
-            sort,
-            page: currentPage
-        });
-    }, [debouncedSearchQuery, filters, sort, currentPage, updateUrlParams]);
-
-    const handleSearchChange = useCallback((newQuery) => {
-        setSearchQuery(newQuery);
-        setCurrentPage(1);
-    }, []);
-
-    const handleFiltersChange = useCallback((newFilters) => {
-        setFilters(newFilters);
-        setCurrentPage(1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
-
-    const handleResetFilters = useCallback(() => {
-        setFilters(INITIAL_FILTERS);
-        setSearchQuery(DEFAULT_SEARCH_QUERY);
-        setCurrentPage(1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
-
-    const handleSortChange = useCallback((newSort) => {
-        setSort(newSort);
-        setCurrentPage(1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
-
-    const handlePageChange = useCallback((newPage) => {
-        if (newPage < 1) return;
-        setCurrentPage(newPage);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
+        if (Array.isArray(apiData) && apiData.length > 0) {
+            mergeCatalogItems(apiData);
+        }
+    }, [apiData]);
 
     return {
-        data: data || [],
+        data: apiData || [],
         loading,
         error,
         refetch,
-        searchQuery,
-        onSearchChange: handleSearchChange,
-        filters,
-        onFiltersChange: handleFiltersChange,
-        onResetFilters: handleResetFilters,
-        sort,
-        onSortChange: handleSortChange,
-        currentPage,
-        onPageChange: handlePageChange,
         pageSize: limit
     };
 }

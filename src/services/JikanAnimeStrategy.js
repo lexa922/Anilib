@@ -24,6 +24,7 @@ export function createJikanAnimeStrategy(baseUrl = 'https://api.jikan.moe/v4') {
     }
 
     return {
+        name: 'jikan',
         baseUrl,
 
         sortAnime(list, sort) {

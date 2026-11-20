@@ -54,14 +54,12 @@
     color: var(--text-secondary);
 }
 
-/* Layout */
 .Profile-layout {
     display: flex;
     gap: 1.75rem;
     align-items: flex-start;
 }
 
-/* Left Column: User Profile Card */
 .Profile-user-card {
     width: 340px;
     flex-shrink: 0;
@@ -244,7 +242,6 @@
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-/* Right Column: Stats & Library */
 .Profile-stats-content {
     flex: 1;
     min-width: 0;
@@ -307,7 +304,6 @@
     gap: 1rem;
 }
 
-/* Full-page Error Card */
 .Profile-error-card {
     display: flex;
     flex-direction: column;
@@ -409,7 +405,6 @@
     color: var(--accent-color);
 }
 
-/* Skeleton Loading State */
 .Profile-skeleton-layout {
     display: flex;
     gap: 1.75rem;
@@ -569,6 +564,22 @@
     box-shadow: var(--shadow-sm);
 }
 
+.Profile-skeleton-analytics-box {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.Skeleton-chart-area {
+    width: 100%;
+    height: 310px;
+    border-radius: 8px;
+    background-color: var(--skeleton-base);
+    animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
 .Skeleton-library-header-row {
     display: flex;
     justify-content: space-between;
@@ -614,7 +625,66 @@
     }
 }
 
-/* Saved Library Box */
+.Profile-collections-box {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.Profile-collections-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding-bottom: 1rem;
+    margin-bottom: 1.15rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.Profile-collection-tab {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.Profile-collection-tab:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+}
+
+.Profile-collection-tab.active {
+    background-color: var(--accent-light);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.Profile-collection-tab.fav-tab:hover {
+    border-color: var(--favorite-color);
+}
+
+.Profile-collection-tab.fav-tab.active {
+    background-color: var(--favorite-light);
+    border-color: var(--favorite-color);
+    color: var(--favorite-color);
+}
+
+.Profile-collections-box .Profile-library-box {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+}
+
 .Profile-library-box {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
@@ -733,7 +803,6 @@
     scrollbar-color: var(--border-color) var(--bg-primary);
 }
 
-/* Custom scrollbar for WebKit / Blink browsers */
 .Profile-library-list::-webkit-scrollbar {
     width: 6px;
 }
@@ -882,7 +951,6 @@
     background-color: rgba(239, 68, 68, 0.1);
 }
 
-/* Responsiveness */
 @media (max-width: 900px) {
     .Profile-layout,
     .Profile-skeleton-layout {

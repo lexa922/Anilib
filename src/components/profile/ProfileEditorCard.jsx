@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useProfile } from '../../context/index.js';
+import { useDashboardStore, selectProfile } from '../../store/index.js';
 import { useFeedback } from '../../hooks/index.js';
 import './ProfileEditorCard.css';
 
@@ -13,7 +13,8 @@ const AVATAR_PRESETS = [
 ];
 
 export function ProfileEditorCard() {
-    const { profile, updateProfile } = useProfile();
+    const profile = useDashboardStore(selectProfile);
+    const updateProfile = useDashboardStore((state) => state.updateProfile);
 
     const [prevProfile, setPrevProfile] = useState(profile);
     const [username, setUsername] = useState(profile.username || '');

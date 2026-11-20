@@ -1,15 +1,28 @@
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Toggle from './components/Toggle';
-import { ThemeProvider, RatingProvider, ProfileProvider, useProfile } from './context/index.js';
-import { DashboardPage, AnimeDetailPage, ProfilePage, NotFoundPage } from './pages/index.js';
+import {
+    useDashboardStore,
+    selectTheme,
+    selectFavoritesCount,
+    selectProfile
+} from './store/index.js';
 import "./App.css";
 
+const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
+const AnimeDetailPage = lazy(() => import('./pages/AnimeDetailPage.jsx'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'));
+
 function AppHeader() {
-    const { profile } = useProfile();
+    const profile = useDashboardStore(selectProfile);
+    const favoritesCount = useDashboardStore(selectFavoritesCount);
     const location = useLocation();
 
+    const searchParams = new URLSearchParams(location.search);
     const isCatalog = location.pathname === '/';
     const isProfile = location.pathname === '/profile';
+    const isFavoritesTab = isProfile && searchParams.get('tab') === 'favorites';
 
     return (
         <header className="app-header">
@@ -30,8 +43,16 @@ function AppHeader() {
                         Каталог
                     </Link>
                     <Link
+                        to="/profile?tab=favorites"
+                        className={`app-nav-link fav-nav-link ${isFavoritesTab ? 'active' : ''}`}
+                        title="Перейти до обраних тайтлів у профілі"
+                    >
+                        <span className="fav-nav-heart" aria-hidden="true">♥</span>
+                        <span>{favoritesCount}</span>
+                    </Link>
+                    <Link
                         to="/profile"
-                        className={`app-nav-link profile-link ${isProfile ? 'active' : ''}`}
+                        className={`app-nav-link profile-link ${isProfile && !isFavoritesTab ? 'active' : ''}`}
                     >
                         <img
                             src={profile.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=AniLib'}
@@ -52,26 +73,43 @@ function AppHeader() {
 }
 
 export function App() {
+    const theme = useDashboardStore(selectTheme);
+    const loadProfile = useDashboardStore((state) => state.loadProfile);
+    const loadRatings = useDashboardStore((state) => state.loadRatings);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+    }, [theme]);
+
+    useEffect(() => {
+        loadProfile();
+        loadRatings();
+    }, [loadProfile, loadRatings]);
+
     return (
         <BrowserRouter>
-            <ThemeProvider>
-                <RatingProvider>
-                    <ProfileProvider>
-                        <div className="app-container">
-                            <AppHeader />
+            <div className={`app-theme-wrapper ${theme === 'dark' ? 'dark-theme' : 'light-theme'}`}>
+                <div className="app-container">
+                    <AppHeader />
 
-                            <main className="app-main">
-                                <Routes>
-                                    <Route path="/" element={<DashboardPage />} />
-                                    <Route path="/anime/:id" element={<AnimeDetailPage />} />
-                                    <Route path="/profile" element={<ProfilePage />} />
-                                    <Route path="*" element={<NotFoundPage />} />
-                                </Routes>
-                            </main>
-                        </div>
-                    </ProfileProvider>
-                </RatingProvider>
-            </ThemeProvider>
+                    <main className="app-main">
+                        <Suspense
+                            fallback={
+                                <div className="app-route-loading" role="status" aria-live="polite">
+                                    Завантаження сторінки...
+                                </div>
+                            }
+                        >
+                            <Routes>
+                                <Route path="/" element={<DashboardPage />} />
+                                <Route path="/anime/:id" element={<AnimeDetailPage />} />
+                                <Route path="/profile" element={<ProfilePage />} />
+                                <Route path="*" element={<NotFoundPage />} />
+                            </Routes>
+                        </Suspense>
+                    </main>
+                </div>
+            </div>
         </BrowserRouter>
     );
 }

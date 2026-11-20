@@ -1,13 +1,25 @@
 import { useCallback, useState, useMemo } from 'react';
 import { userLibraryService } from '../../api/userLibraryService.js';
 import { useFetch, useFeedback } from '../../hooks/index.js';
-import { useRatings } from '../../context/index.js';
+import { useDashboardStore, selectUserRating } from '../../store/index.js';
 import { LIBRARY_STATUS_OPTIONS } from '../../constants/filterConstants.js';
 import RatingCounter from '../RatingCounter.jsx';
 import './AnimeLibraryPanel.css';
 
-export function AnimeLibraryPanel({ animeId, animeTitle, totalEpisodesRaw, isUpcoming }) {
-    const { getRating, setRating, resetRating } = useRatings();
+export function AnimeLibraryPanel({
+    animeId,
+    animeTitle,
+    totalEpisodesRaw,
+    isUpcoming,
+    animeScore = null,
+    animeGenres = [],
+    animePoster = '',
+    animeSubtype = '',
+    animeYear = null
+}) {
+    const storedRating = useDashboardStore(selectUserRating(animeId));
+    const setRating = useDashboardStore((state) => state.setRating);
+    const resetRating = useDashboardStore((state) => state.resetRating);
 
     const [libraryStatus, setLibraryStatus] = useState('plan_to_watch');
     const [episodesWatched, setEpisodesWatched] = useState(0);
@@ -24,8 +36,15 @@ export function AnimeLibraryPanel({ animeId, animeTitle, totalEpisodesRaw, isUpc
         return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
     }, [totalEpisodesRaw]);
 
-    const fetchLibraryEntry = useCallback((signal) => {
-        return userLibraryService.getLibraryEntry(animeId, signal);
+    const fetchLibraryEntry = useCallback(async (signal) => {
+        const entry = await userLibraryService.getLibraryEntry(animeId, signal);
+        if (entry && !signal?.aborted) {
+            const score = entry.user_score !== undefined && entry.user_score !== null
+                ? Number(entry.user_score)
+                : 0;
+            useDashboardStore.getState().setRating(animeId, score);
+        }
+        return entry;
     }, [animeId]);
 
     const { data: libraryEntry, loading: libraryLoading } = useFetch(fetchLibraryEntry, [animeId]);
@@ -45,10 +64,9 @@ export function AnimeLibraryPanel({ animeId, animeTitle, totalEpisodesRaw, isUpc
                 ? Number(libraryEntry.user_score)
                 : 0;
             setLibraryRating(score);
-            setRating(animeId, score);
         } else {
             setInLibrary(false);
-            setLibraryRating(getRating(animeId));
+            setLibraryRating(storedRating);
         }
     }
 
@@ -142,13 +160,28 @@ export function AnimeLibraryPanel({ animeId, animeTitle, totalEpisodesRaw, isUpc
         setEpisodesWatched(safeEpisodes);
         setEpisodesInput(String(safeEpisodes));
 
+        const normalizedGenres = Array.isArray(animeGenres)
+            ? animeGenres
+                .map((g) => (typeof g === 'string' ? g.trim() : String(g?.name || g?.title || '').trim()))
+                .filter(Boolean)
+            : [];
+
+        const parsedKitsuScore = animeScore != null && !Number.isNaN(Number(animeScore)) && Number(animeScore) > 0
+            ? Number(Number(animeScore).toFixed(2))
+            : null;
+
         try {
             await userLibraryService.saveLibraryEntry(animeId, {
                 title: animeTitle,
                 user_score: libraryRating,
                 status: libraryStatus,
                 episodes_watched: safeEpisodes,
-                notes
+                notes,
+                kitsu_score: parsedKitsuScore,
+                genres: normalizedGenres,
+                poster: animePoster || '',
+                subtype: animeSubtype || '',
+                release_year: animeYear ?? null
             });
             setRating(animeId, libraryRating);
             setInLibrary(true);

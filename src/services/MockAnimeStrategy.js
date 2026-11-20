@@ -13,6 +13,7 @@ export function createMockAnimeStrategy(mockData = MOCK_ANIME_LIST) {
     }
 
     return {
+        name: 'mock',
         sortAnime(list, sort) {
             return sortAnime(list, sort);
         },

@@ -5,8 +5,18 @@ CREATE TABLE IF NOT EXISTS user_library (
   status TEXT CHECK(status IN ('watching', 'completed', 'dropped', 'plan_to_watch')) DEFAULT 'plan_to_watch',
   episodes_watched INTEGER DEFAULT 0,
   notes TEXT,
+  kitsu_score REAL,
+  genres TEXT DEFAULT '[]',
+  poster TEXT DEFAULT '',
+  subtype TEXT DEFAULT '',
+  release_year INTEGER,
+  metadata_synced INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_user_library_status ON user_library(status);
+CREATE INDEX IF NOT EXISTS idx_user_library_updated_at ON user_library(updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS user_profile (
   id TEXT PRIMARY KEY,
@@ -18,4 +28,3 @@ CREATE TABLE IF NOT EXISTS user_profile (
 
 INSERT OR IGNORE INTO user_profile (id, username, avatar_url, bio)
 VALUES ('default', 'Anime Fan', 'https://api.dicebear.com/7.x/bottts/svg?seed=AniLib', 'Любитель аніме та якісної аналітики');
-

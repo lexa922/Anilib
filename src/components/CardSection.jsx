@@ -9,7 +9,8 @@ function CardSection({
     processedCount = 0,
     totalCount = 0,
     isStreaming = false,
-    isComplete = false
+    isComplete = false,
+    customSubtitle = null
 }) {
     const metrics = Array.isArray(kpiData) ? kpiData : EMPTY_KPIS;
 
@@ -17,15 +18,17 @@ function CardSection({
         ? Math.min(100, Math.round((processedCount / totalCount) * 100))
         : 0;
 
-    let statusText = 'Глобальні показники бази Kitsu';
-    if (isStreaming) {
-        statusText = totalCount > 0
-            ? `Фоновий аналіз бази Kitsu: ${processedCount.toLocaleString('uk-UA')} / ${totalCount.toLocaleString('uk-UA')} (${progressPercent}%)`
-            : 'Фоновий аналіз бази Kitsu...';
-    } else if (totalCount > 0) {
-        statusText = isComplete
-            ? `Повна база Kitsu (${totalCount.toLocaleString('uk-UA')} тайтлів)`
-            : `Проаналізовано ${processedCount.toLocaleString('uk-UA')} з ${totalCount.toLocaleString('uk-UA')} тайтлів Kitsu`;
+    let statusText = customSubtitle || 'Глобальні показники бази Kitsu';
+    if (!customSubtitle) {
+        if (isStreaming) {
+            statusText = totalCount > 0
+                ? `Фоновий аналіз бази Kitsu: ${processedCount.toLocaleString('uk-UA')} / ${totalCount.toLocaleString('uk-UA')} (${progressPercent}%)`
+                : 'Фоновий аналіз бази Kitsu...';
+        } else if (totalCount > 0) {
+            statusText = isComplete
+                ? `Повна база Kitsu (${totalCount.toLocaleString('uk-UA')} тайтлів)`
+                : `Проаналізовано ${processedCount.toLocaleString('uk-UA')} з ${totalCount.toLocaleString('uk-UA')} тайтлів Kitsu`;
+        }
     }
 
     return (
@@ -35,7 +38,7 @@ function CardSection({
                     <h2 className="Card-section-heading">Метрики дашборду</h2>
                     <span className="Card-section-sub">{statusText}</span>
                 </div>
-                {isStreaming && totalCount > 0 && (
+                {!customSubtitle && isStreaming && totalCount > 0 && (
                     <div className="Card-section-progress" aria-label="Прогрес фонового аналізу">
                         <div
                             className="Card-section-progress-bar"

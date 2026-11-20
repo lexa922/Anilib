@@ -20,6 +20,10 @@ export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy(
             return activeStrategy;
         },
 
+        getStrategyName() {
+            return activeStrategy?.name || 'custom';
+        },
+
         sortAnime(animeList, sort) {
             if (activeStrategy && typeof activeStrategy.sortAnime === 'function') {
                 return activeStrategy.sortAnime(animeList, sort);
@@ -75,24 +79,24 @@ export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy(
                 : this.getAnime({ ...filters, sort: '-averageRating' }, signal);
         },
 
-        async streamAllAnimeStats({ onBatch, signal } = {}) {
+        async streamAllAnimeStats({ onBatch, startOffset = 0, signal } = {}) {
             if (!activeStrategy) {
                 throw new Error('No strategy configured on AnimeApiClient.');
             }
 
             if (typeof activeStrategy.streamAllAnimeStats === 'function') {
-                return activeStrategy.streamAllAnimeStats({ onBatch, signal });
+                return activeStrategy.streamAllAnimeStats({ onBatch, startOffset, signal });
             }
 
             const list = await this.getAnime({}, signal);
             if (typeof onBatch === 'function') {
                 onBatch({
                     items: list,
-                    processedCount: list.length,
-                    totalCount: list.length
+                    totalCount: list.length,
+                    nextOffset: list.length
                 });
             }
-            return { completed: true, totalCount: list.length };
+            return { completed: true, rateLimited: false, totalCount: list.length, nextOffset: list.length };
         },
 
         async getAnimeById(id, signal = null) {

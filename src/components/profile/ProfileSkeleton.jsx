@@ -61,6 +61,12 @@ export function ProfileSkeleton() {
                         </div>
                     </div>
 
+                    <div className="Profile-skeleton-analytics-box">
+                        <div className="Skeleton-line header-title" />
+                        <div className="Skeleton-line header-sub" />
+                        <div className="Skeleton-chart-area" />
+                    </div>
+
                     <div className="Profile-skeleton-library-box">
                         <div className="Skeleton-library-header-row">
                             <div className="Skeleton-line header-title" />

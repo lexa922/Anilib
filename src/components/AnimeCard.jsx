@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
-import { useRatings } from '../context/index.js';
+import { useDashboardStore, selectUserRating } from '../store/index.js';
 import { ANIME_STATUS_LABELS } from '../constants/filterConstants.js';
+import FavoriteButton from './common/FavoriteButton.jsx';
 import "./AnimeCard.css";
 
 function AnimeCard({ anime }) {
-    const { getRating } = useRatings();
-    const userRating = getRating(anime.id);
+    const userRating = useDashboardStore(selectUserRating(anime.id));
     const posterUrl = anime.poster || anime.images?.jpg?.image_url;
 
     const statusText = ANIME_STATUS_LABELS[(anime.status || '').toLowerCase()] || anime.status;
@@ -13,9 +13,14 @@ function AnimeCard({ anime }) {
     return (
         <Link to={`/anime/${anime.id}`} className="Anime-card-link">
             <div className="Anime-card">
-                {posterUrl && (
-                    <img src={posterUrl} alt={anime.title} className="Anime-card-image" />
-                )}
+                <div className="Anime-card-poster-wrap">
+                    {posterUrl ? (
+                        <img src={posterUrl} alt={anime.title} className="Anime-card-image" />
+                    ) : (
+                        <div className="Anime-card-poster-placeholder">🎬</div>
+                    )}
+                    <FavoriteButton anime={anime} variant="icon" className="Anime-card-fav-btn" />
+                </div>
                 <div className="Anime-card-content">
                     <h3 className="Anime-card-title">{anime.title}</h3>
                     <div className="Anime-card-meta">

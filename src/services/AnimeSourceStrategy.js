@@ -3,6 +3,7 @@ import { paginateAnime } from './animePagination.js';
 
 export function createAnimeSourceStrategy() {
     return {
+        name: 'custom',
         async getAnime() {
             throw new Error('getAnime(filters) must be implemented by concrete AnimeSourceStrategy');
         },
