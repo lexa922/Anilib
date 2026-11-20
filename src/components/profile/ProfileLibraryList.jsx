@@ -3,14 +3,8 @@ import { Link } from 'react-router-dom';
 import { userLibraryService } from '../../api/userLibraryService.js';
 import { useRatings } from '../../context/index.js';
 import { useFeedback } from '../../hooks/index.js';
+import { LIBRARY_STATUS_LABELS } from '../../constants/filterConstants.js';
 import './ProfileLibraryList.css';
-
-const STATUS_LABELS = {
-    plan_to_watch: 'У планах',
-    watching: 'Дивлюсь',
-    completed: 'Переглянуто',
-    dropped: 'Покинуто'
-};
 
 export function ProfileLibraryList({ libraryItems = [], onDeleted }) {
     const { resetRating } = useRatings();
@@ -57,7 +51,7 @@ export function ProfileLibraryList({ libraryItems = [], onDeleted }) {
                             className={`Profile-filter-tab ${libraryFilter === statusKey ? 'active' : ''}`}
                             onClick={() => setLibraryFilter(statusKey)}
                         >
-                            {statusKey === 'all' ? 'Всі' : STATUS_LABELS[statusKey]}
+                            {statusKey === 'all' ? 'Всі' : LIBRARY_STATUS_LABELS[statusKey]}
                         </button>
                     ))}
                 </div>
@@ -88,7 +82,7 @@ export function ProfileLibraryList({ libraryItems = [], onDeleted }) {
                                 </Link>
                                 <div className="Item-meta-row">
                                     <span className={`Item-status-badge status-${item.status}`}>
-                                        {STATUS_LABELS[item.status] || item.status}
+                                        {LIBRARY_STATUS_LABELS[item.status] || item.status}
                                     </span>
                                     <span className="Item-episodes">
                                         Епізоди: {item.episodes_watched} сер.

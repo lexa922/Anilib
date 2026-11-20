@@ -5,19 +5,7 @@ import { paginateAnime } from './animePagination.js';
 
 export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy()) {
     let activeStrategy = initialStrategy;
-    const loadedAnimeMap = new Map();
     let categoriesCache = null;
-
-    function cacheResults(results) {
-        if (Array.isArray(results)) {
-            results.forEach((item) => {
-                if (item && item.id) {
-                    loadedAnimeMap.set(String(item.id), item);
-                }
-            });
-        }
-        return results;
-    }
 
     return {
         setStrategy(newStrategy) {
@@ -25,20 +13,11 @@ export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy(
                 throw new Error('A valid strategy object must be provided.');
             }
             activeStrategy = newStrategy;
-            loadedAnimeMap.clear();
             categoriesCache = null;
         },
 
         getStrategy() {
             return activeStrategy;
-        },
-
-        getAllLoadedAnime() {
-            return Array.from(loadedAnimeMap.values());
-        },
-
-        clearCache() {
-            loadedAnimeMap.clear();
         },
 
         sortAnime(animeList, sort) {
@@ -70,8 +49,7 @@ export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy(
                 throw new Error('getAnime not supported by active strategy.');
             }
 
-            const results = await activeStrategy.getAnime(filters, signal);
-            return cacheResults(results);
+            return activeStrategy.getAnime(filters, signal);
         },
 
         async getAnimePage(filters = {}, pagination = {}, signal = null) {
@@ -80,8 +58,7 @@ export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy(
             }
 
             if (typeof activeStrategy.getAnimePage === 'function') {
-                const results = await activeStrategy.getAnimePage(filters, pagination, signal);
-                return cacheResults(results);
+                return activeStrategy.getAnimePage(filters, pagination, signal);
             }
 
             const filtered = await this.getAnime(filters, signal);
@@ -93,11 +70,9 @@ export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy(
                 throw new Error('No strategy configured on AnimeApiClient.');
             }
 
-            const results = typeof activeStrategy.getTopAnime === 'function'
-                ? await activeStrategy.getTopAnime(filters, signal)
-                : await this.getAnime({ ...filters, sort: '-averageRating' }, signal);
-
-            return cacheResults(results);
+            return typeof activeStrategy.getTopAnime === 'function'
+                ? activeStrategy.getTopAnime(filters, signal)
+                : this.getAnime({ ...filters, sort: '-averageRating' }, signal);
         },
 
         async streamAllAnimeStats({ onBatch, signal } = {}) {

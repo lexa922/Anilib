@@ -60,14 +60,20 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
         const categoryMap = new Map();
         (json.included || []).forEach((inc) => {
             if (inc.type === 'categories' && inc.attributes?.title) {
-                categoryMap.set(inc.id, inc.attributes.title);
+                categoryMap.set(inc.id, {
+                    name: inc.attributes.title,
+                    slug: inc.attributes.slug || ''
+                });
             }
         });
 
         const normalizedItems = data.map((item) => {
             const itemGenres = (item.relationships?.categories?.data || [])
-                .map((cat) => ({ id: String(cat.id), name: categoryMap.get(cat.id) }))
-                .filter((g) => Boolean(g.name));
+                .map((cat) => {
+                    const entry = categoryMap.get(cat.id);
+                    return entry ? { id: String(cat.id), name: entry.name, slug: entry.slug } : null;
+                })
+                .filter(Boolean);
 
             return normalizeAnime({
                 ...item,

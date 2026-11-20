@@ -2,6 +2,7 @@ import { useCallback, useState, useMemo } from 'react';
 import { userLibraryService } from '../../api/userLibraryService.js';
 import { useFetch, useFeedback } from '../../hooks/index.js';
 import { useRatings } from '../../context/index.js';
+import { LIBRARY_STATUS_OPTIONS } from '../../constants/filterConstants.js';
 import RatingCounter from '../RatingCounter.jsx';
 import './AnimeLibraryPanel.css';
 
@@ -198,10 +199,9 @@ export function AnimeLibraryPanel({ animeId, animeTitle, totalEpisodesRaw, isUpc
                     onChange={(e) => setLibraryStatus(e.target.value)}
                     disabled={librarySaving}
                 >
-                    <option value="plan_to_watch">У планах</option>
-                    <option value="watching">Дивлюсь</option>
-                    <option value="completed">Переглянуто</option>
-                    <option value="dropped">Покинуто</option>
+                    {LIBRARY_STATUS_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                 </select>
             </div>
 

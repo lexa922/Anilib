@@ -1,21 +1,17 @@
-import { useMemo } from 'react';
 import KpiCard from './KpiCard.jsx';
-import { calculateKpis } from '../utils/kpi.js';
+import { buildKpisFromAccumulator } from '../utils/kpi.js';
 import './CardSection.css';
 
+const EMPTY_KPIS = buildKpisFromAccumulator(null);
+
 function CardSection({
-    animeList,
     kpiData,
     processedCount = 0,
     totalCount = 0,
     isStreaming = false,
     isComplete = false
 }) {
-    const metrics = useMemo(() => {
-        if (kpiData) return kpiData;
-        if (animeList) return calculateKpis(animeList);
-        return calculateKpis([]);
-    }, [kpiData, animeList]);
+    const metrics = Array.isArray(kpiData) ? kpiData : EMPTY_KPIS;
 
     const progressPercent = totalCount > 0
         ? Math.min(100, Math.round((processedCount / totalCount) * 100))

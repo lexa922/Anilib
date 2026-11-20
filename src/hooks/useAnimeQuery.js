@@ -57,20 +57,17 @@ export function useAnimeQuery(initialOptions = {}) {
     }, [debouncedSearchQuery, filters, sort, currentPage, updateUrlParams]);
 
     const handleSearchChange = useCallback((newQuery) => {
-        animeApiClient.clearCache();
         setSearchQuery(newQuery);
         setCurrentPage(1);
     }, []);
 
     const handleFiltersChange = useCallback((newFilters) => {
-        animeApiClient.clearCache();
         setFilters(newFilters);
         setCurrentPage(1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
 
     const handleResetFilters = useCallback(() => {
-        animeApiClient.clearCache();
         setFilters(INITIAL_FILTERS);
         setSearchQuery(DEFAULT_SEARCH_QUERY);
         setCurrentPage(1);

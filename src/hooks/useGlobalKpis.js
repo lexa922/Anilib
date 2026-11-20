@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { animeApiClient } from '../services/index.js';
 import {
     createKpiAccumulator,
@@ -33,89 +33,124 @@ function writeCachedKpis(payload) {
     }
 }
 
-export function useGlobalKpis() {
-    const [state, setState] = useState(() => {
-        const cached = readCachedKpis();
-        if (cached) {
-            return {
-                kpiData: cached.kpiData,
-                processedCount: cached.processedCount || 0,
-                totalCount: cached.totalCount || 0,
-                isStreaming: false,
-                isComplete: Boolean(cached.isComplete)
-            };
-        }
+function createInitialState() {
+    const cached = readCachedKpis();
+    if (cached) {
         return {
-            kpiData: buildKpisFromAccumulator(null),
-            processedCount: 0,
-            totalCount: 0,
-            isStreaming: true,
-            isComplete: false
+            kpiData: cached.kpiData,
+            processedCount: cached.processedCount || 0,
+            totalCount: cached.totalCount || 0,
+            isStreaming: false,
+            isComplete: Boolean(cached.isComplete)
         };
+    }
+    return {
+        kpiData: buildKpisFromAccumulator(null),
+        processedCount: 0,
+        totalCount: 0,
+        isStreaming: false,
+        isComplete: false
+    };
+}
+
+let storeState = createInitialState();
+let activeStreamPromise = null;
+const listeners = new Set();
+
+function notifyListeners() {
+    listeners.forEach((listener) => listener());
+}
+
+function setStoreState(next) {
+    storeState = next;
+    notifyListeners();
+}
+
+function ensureGlobalKpiStream() {
+    if (storeState.isComplete || activeStreamPromise) {
+        return;
+    }
+
+    const cached = readCachedKpis();
+    if (cached) {
+        setStoreState({
+            kpiData: cached.kpiData,
+            processedCount: cached.processedCount || 0,
+            totalCount: cached.totalCount || 0,
+            isStreaming: false,
+            isComplete: Boolean(cached.isComplete)
+        });
+        return;
+    }
+
+    const acc = createKpiAccumulator();
+    setStoreState({
+        ...storeState,
+        isStreaming: true
     });
 
-    useEffect(() => {
-        const cached = readCachedKpis();
-        if (cached) {
-            return undefined;
+    activeStreamPromise = animeApiClient.streamAllAnimeStats({
+        onBatch: ({ items, processedCount, totalCount }) => {
+            accumulateKpiBatch(acc, items);
+            setStoreState({
+                kpiData: buildKpisFromAccumulator(acc),
+                processedCount,
+                totalCount,
+                isStreaming: true,
+                isComplete: false
+            });
         }
+    })
+        .then((result) => {
+            const finalKpis = buildKpisFromAccumulator(acc);
+            const isComplete = Boolean(result?.completed);
+            const finalTotal = result?.totalCount || acc.totalCount;
 
-        const controller = new AbortController();
-        const acc = createKpiAccumulator();
+            setStoreState({
+                kpiData: finalKpis,
+                processedCount: acc.totalCount,
+                totalCount: finalTotal,
+                isStreaming: false,
+                isComplete
+            });
 
-        animeApiClient.streamAllAnimeStats({
-            signal: controller.signal,
-            onBatch: ({ items, processedCount, totalCount }) => {
-                if (controller.signal.aborted) return;
-                accumulateKpiBatch(acc, items);
-                setState({
-                    kpiData: buildKpisFromAccumulator(acc),
-                    processedCount,
-                    totalCount,
-                    isStreaming: true,
-                    isComplete: false
-                });
-            }
-        })
-            .then((result) => {
-                if (controller.signal.aborted) return;
-                const finalKpis = buildKpisFromAccumulator(acc);
-                const isComplete = Boolean(result?.completed);
-                const finalTotal = result?.totalCount || acc.totalCount;
-
-                setState({
+            if (acc.totalCount > 0) {
+                writeCachedKpis({
                     kpiData: finalKpis,
                     processedCount: acc.totalCount,
                     totalCount: finalTotal,
-                    isStreaming: false,
                     isComplete
                 });
-
-                if (acc.totalCount > 0) {
-                    writeCachedKpis({
-                        kpiData: finalKpis,
-                        processedCount: acc.totalCount,
-                        totalCount: finalTotal,
-                        isComplete
-                    });
-                }
-            })
-            .catch((err) => {
-                if (err?.name === 'AbortError' || controller.signal.aborted) {
-                    return;
-                }
-                setState((prev) => ({
-                    ...prev,
-                    isStreaming: false
-                }));
+            }
+        })
+        .catch(() => {
+            setStoreState({
+                ...storeState,
+                isStreaming: false
             });
+        })
+        .finally(() => {
+            activeStreamPromise = null;
+        });
+}
 
-        return () => {
-            controller.abort();
-        };
+function subscribe(listener) {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+}
+
+function getSnapshot() {
+    return storeState;
+}
+
+export function useGlobalKpis() {
+    const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+    useEffect(() => {
+        ensureGlobalKpiStream();
     }, []);
 
-    return state;
+    return snapshot;
 }
 
 export default useGlobalKpis;

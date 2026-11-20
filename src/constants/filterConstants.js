@@ -20,3 +20,14 @@ export const ANIME_STATUS_LABELS = {
     upcoming: 'Анонс',
     unreleased: 'Анонс'
 };
+
+export const LIBRARY_STATUS_LABELS = {
+    plan_to_watch: 'У планах',
+    watching: 'Дивлюсь',
+    completed: 'Переглянуто',
+    dropped: 'Покинуто'
+};
+
+export const LIBRARY_STATUS_OPTIONS = Object.entries(LIBRARY_STATUS_LABELS).map(
+    ([value, label]) => ({ value, label })
+);

@@ -5,7 +5,6 @@ import { DEFAULT_SORT } from '../constants/sortOptions.js';
 export function parseUrlParams(search = typeof window !== 'undefined' ? window.location.search : '') {
     const searchParams = search instanceof URLSearchParams ? search : new URLSearchParams(search);
     const query = searchParams.get('query') || searchParams.get('q') || '';
-    const category = searchParams.get('category') || 'all';
     const sort = searchParams.get('sort') || DEFAULT_SORT;
     const genresRaw = searchParams.get('genres');
     const genres = genresRaw ? genresRaw.split(',').filter(Boolean) : [];
@@ -17,7 +16,6 @@ export function parseUrlParams(search = typeof window !== 'undefined' ? window.l
 
     return {
         query,
-        category,
         sort,
         genres,
         status,
