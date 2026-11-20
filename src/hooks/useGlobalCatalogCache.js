@@ -228,9 +228,14 @@ function ensureCatalogInitialized() {
     }
 
     currentStrategyName = activeStrategyName;
-    activeInitPromise = (async () => {
+    const controller = new AbortController();
+    activeStreamController = controller;
+
+    const initPromise = (async () => {
         try {
             const cached = await readCatalogCache(activeStrategyName);
+            if (controller.signal.aborted) return;
+
             if (cached && Array.isArray(cached.items) && cached.items.length > 0) {
                 const preExisting = Array.from(itemsById.values());
                 itemsById = new Map();
@@ -259,9 +264,6 @@ function ensureCatalogInitialized() {
                 currentIsStreaming = true;
                 flushSnapshot();
             }
-
-            const controller = new AbortController();
-            activeStreamController = controller;
 
             const result = await animeApiClient.streamAllAnimeStats({
                 startOffset: currentNextOffset,
@@ -313,10 +315,15 @@ function ensureCatalogInitialized() {
                 flushSnapshot();
             }
         } finally {
-            activeStreamController = null;
-            activeInitPromise = null;
+            if (activeStreamController === controller) {
+                activeStreamController = null;
+            }
+            if (activeInitPromise === initPromise) {
+                activeInitPromise = null;
+            }
         }
     })();
+    activeInitPromise = initPromise;
 }
 
 export async function refreshCatalogCache() {

@@ -36,8 +36,15 @@ export function AnimeLibraryPanel({
         return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
     }, [totalEpisodesRaw]);
 
-    const fetchLibraryEntry = useCallback((signal) => {
-        return userLibraryService.getLibraryEntry(animeId, signal);
+    const fetchLibraryEntry = useCallback(async (signal) => {
+        const entry = await userLibraryService.getLibraryEntry(animeId, signal);
+        if (entry && !signal?.aborted) {
+            const score = entry.user_score !== undefined && entry.user_score !== null
+                ? Number(entry.user_score)
+                : 0;
+            useDashboardStore.getState().setRating(animeId, score);
+        }
+        return entry;
     }, [animeId]);
 
     const { data: libraryEntry, loading: libraryLoading } = useFetch(fetchLibraryEntry, [animeId]);
@@ -57,7 +64,6 @@ export function AnimeLibraryPanel({
                 ? Number(libraryEntry.user_score)
                 : 0;
             setLibraryRating(score);
-            setRating(animeId, score);
         } else {
             setInLibrary(false);
             setLibraryRating(storedRating);

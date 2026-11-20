@@ -294,7 +294,7 @@ export const useDashboardStore = create(
                         }
                     })
                     .catch(() => {
-                        // Silently ignore if backend is offline
+                        ratingsLoadPromise = null;
                     });
                 return ratingsLoadPromise;
             },
@@ -315,7 +315,10 @@ export const useDashboardStore = create(
                         }
                         return null;
                     })
-                    .catch(() => null);
+                    .catch(() => {
+                        profileLoadPromise = null;
+                        return null;
+                    });
                 return profileLoadPromise;
             },
 
