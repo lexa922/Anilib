@@ -1,26 +1,26 @@
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { animeApiClient } from '../services/index.js';
-import { userLibraryService } from '../api/userLibraryService.js';
-import { useFetch, useFeedback, useBackNavigation } from '../hooks/index.js';
+import { useFetch, useBackNavigation } from '../hooks/index.js';
 import { ANIME_STATUS_LABELS } from '../constants/filterConstants.js';
-import RatingCounter from '../components/RatingCounter.jsx';
 import { useRatings } from '../context/index.js';
+import AnimeDetailSkeleton from '../components/anime/AnimeDetailSkeleton.jsx';
+import AnimeLibraryPanel from '../components/anime/AnimeLibraryPanel.jsx';
 import './AnimeDetailPage.css';
+
+const SUBTYPE_LABELS = {
+    tv: 'TV Серіал',
+    movie: 'Повнометражний фільм',
+    ova: 'OVA',
+    ona: 'ONA',
+    special: 'Спешл',
+    music: 'Музичне відео'
+};
 
 export function AnimeDetailPage() {
     const { id } = useParams();
     const handleBack = useBackNavigation('/');
-    const { getRating, setRating, resetRating } = useRatings();
-
-    const [libraryStatus, setLibraryStatus] = useState('plan_to_watch');
-    const [episodesWatched, setEpisodesWatched] = useState(0);
-    const [episodesInput, setEpisodesInput] = useState('0');
-    const [notes, setNotes] = useState('');
-    const [libraryRating, setLibraryRating] = useState(0);
-    const [inLibrary, setInLibrary] = useState(false);
-    const [feedback, showFeedback] = useFeedback();
-    const [librarySaving, setLibrarySaving] = useState(false);
+    const { getRating } = useRatings();
 
     const fetchAnime = useCallback((signal) => {
         return animeApiClient.getAnimeById(id, signal);
@@ -28,185 +28,8 @@ export function AnimeDetailPage() {
 
     const { data: anime, loading, error, refetch } = useFetch(fetchAnime, [id]);
 
-    const totalEpisodes = useMemo(() => {
-        if (!anime?.episodes) return null;
-        const parsed = parseInt(anime.episodes, 10);
-        return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-    }, [anime?.episodes]);
-
-    const fetchLibraryEntry = useCallback((signal) => {
-        return userLibraryService.getLibraryEntry(id, signal);
-    }, [id]);
-
-    const { data: libraryEntry, loading: libraryLoading } = useFetch(fetchLibraryEntry, [id]);
-    const [prevSyncedKey, setPrevSyncedKey] = useState(null);
-    const syncKey = libraryLoading ? null : `${id}:${libraryEntry?.updated_at ?? 'none'}`;
-
-    if (syncKey && prevSyncedKey !== syncKey) {
-        setPrevSyncedKey(syncKey);
-        if (libraryEntry) {
-            setInLibrary(true);
-            setLibraryStatus(libraryEntry.status || 'plan_to_watch');
-            const ep = Math.max(0, parseInt(libraryEntry.episodes_watched, 10) || 0);
-            setEpisodesWatched(ep);
-            setEpisodesInput(String(ep));
-            setNotes(libraryEntry.notes || '');
-            const score = libraryEntry.user_score !== undefined && libraryEntry.user_score !== null
-                ? Number(libraryEntry.user_score)
-                : 0;
-            setLibraryRating(score);
-            setRating(id, score);
-        } else {
-            setInLibrary(false);
-            setLibraryRating(getRating(id));
-        }
-    }
-
-    const handleRatingChange = (newVal) => {
-        setLibraryRating(newVal);
-        setRating(id, newVal);
-    };
-
-    const handleStepDown = () => {
-        const next = Math.max(0, episodesWatched - 1);
-        setEpisodesWatched(next);
-        setEpisodesInput(String(next));
-    };
-
-    const handleStepUp = () => {
-        const max = totalEpisodes ?? Infinity;
-        const next = Math.min(max, episodesWatched + 1);
-        setEpisodesWatched(next);
-        setEpisodesInput(String(next));
-    };
-
-    const handleMarkAllEpisodes = () => {
-        if (!totalEpisodes) return;
-        setEpisodesWatched(totalEpisodes);
-        setEpisodesInput(String(totalEpisodes));
-    };
-
-    const handleEpisodesKeyDown = (e) => {
-        // Prevent typing characters that could break integer input
-        if (['-', '+', 'e', 'E', '.', ','].includes(e.key)) {
-            e.preventDefault();
-        }
-    };
-
-    const handleEpisodesChange = (e) => {
-        const raw = e.target.value;
-        if (raw === '') {
-            setEpisodesInput('');
-            setEpisodesWatched(0);
-            return;
-        }
-
-        const digits = raw.replace(/\D/g, '');
-        if (!digits) {
-            setEpisodesInput('');
-            setEpisodesWatched(0);
-            return;
-        }
-
-        let parsed = parseInt(digits, 10);
-        if (Number.isNaN(parsed) || parsed < 0) {
-            parsed = 0;
-        }
-        if (totalEpisodes !== null && parsed > totalEpisodes) {
-            parsed = totalEpisodes;
-        }
-
-        setEpisodesInput(String(parsed));
-        setEpisodesWatched(parsed);
-    };
-
-    const handleEpisodesBlur = () => {
-        let parsed = parseInt(episodesInput, 10);
-        if (Number.isNaN(parsed) || parsed < 0) {
-            parsed = 0;
-        }
-        if (totalEpisodes !== null && parsed > totalEpisodes) {
-            parsed = totalEpisodes;
-        }
-        setEpisodesWatched(parsed);
-        setEpisodesInput(String(parsed));
-    };
-
-    const handleSaveLibraryDetails = async () => {
-        if (!anime) return;
-        setLibrarySaving(true);
-
-        const safeEpisodes = Math.max(
-            0,
-            totalEpisodes !== null ? Math.min(totalEpisodes, episodesWatched) : episodesWatched
-        );
-
-        try {
-            await userLibraryService.saveLibraryEntry(id, {
-                title: anime.title,
-                user_score: libraryRating,
-                status: libraryStatus,
-                episodes_watched: safeEpisodes,
-                notes
-            });
-            setRating(id, libraryRating);
-            setInLibrary(true);
-            showFeedback('✓ Дані бібліотеки успішно збережено');
-        } catch (err) {
-            showFeedback(err.message || 'Помилка збереження даних', true);
-        } finally {
-            setLibrarySaving(false);
-        }
-    };
-
-    const handleDeleteFromLibrary = async () => {
-        setLibrarySaving(true);
-        try {
-            await userLibraryService.deleteLibraryEntry(id);
-            setInLibrary(false);
-            setLibraryStatus('plan_to_watch');
-            setEpisodesWatched(0);
-            setEpisodesInput('0');
-            setNotes('');
-            setLibraryRating(0);
-            resetRating(id);
-            showFeedback('Тайтл видалено з вашої бібліотеки');
-        } catch (err) {
-            showFeedback(err.message || 'Помилка видалення з бібліотеки', true);
-        } finally {
-            setLibrarySaving(false);
-        }
-    };
-
     if (loading) {
-        return (
-            <div className="Anime-detail-container">
-                <div className="Anime-detail-nav">
-                    <button type="button" className="Anime-detail-back-btn" onClick={handleBack}>
-                        ← Назад
-                    </button>
-                    <div className="Anime-detail-breadcrumbs">
-                        <Link to="/">Головна</Link>
-                        <span>/</span>
-                        <span>Завантаження...</span>
-                    </div>
-                </div>
-
-                <div className="Anime-detail-loading-skeleton">
-                    <div className="Detail-skeleton-banner" />
-                    <div className="Detail-skeleton-content">
-                        <div className="Detail-skeleton-poster" />
-                        <div className="Detail-skeleton-info">
-                            <div className="Detail-skeleton-line title" />
-                            <div className="Detail-skeleton-line meta" />
-                            <div className="Detail-skeleton-line text" />
-                            <div className="Detail-skeleton-line text" />
-                            <div className="Detail-skeleton-line text short" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+        return <AnimeDetailSkeleton onBack={handleBack} />;
     }
 
     if (error || !anime) {
@@ -251,16 +74,8 @@ export function AnimeDetailPage() {
     const normalizedStatus = (anime.status || '').toLowerCase().trim();
     const isUpcoming = normalizedStatus === 'upcoming' || normalizedStatus === 'unreleased' || normalizedStatus === 'анонс';
     const statusText = ANIME_STATUS_LABELS[normalizedStatus] || anime.status || 'Невідомо';
-
-    const subtypeMap = {
-        tv: 'TV Серіал',
-        movie: 'Повнометражний фільм',
-        ova: 'OVA',
-        ona: 'ONA',
-        special: 'Спешл',
-        music: 'Музичне відео'
-    };
-    const subtypeText = subtypeMap[(anime.subtype || '').toLowerCase()] || anime.subtype || 'Серіал';
+    const subtypeText = SUBTYPE_LABELS[(anime.subtype || '').toLowerCase()] || anime.subtype || 'Серіал';
+    const userRating = getRating(id);
 
     return (
         <div className="Anime-detail-container">
@@ -369,150 +184,12 @@ export function AnimeDetailPage() {
                         )}
                     </div>
 
-                    {!isUpcoming ? (
-                        <div className="Anime-detail-library-box">
-                            <div className="Detail-library-header">
-                                <span className="Detail-library-title">📚 Моя бібліотека</span>
-                                {inLibrary && (
-                                    <span className="Detail-library-saved-tag">У списку</span>
-                                )}
-                            </div>
-
-                            <div className="Detail-library-field">
-                                <label htmlFor="lib-status-select" className="Detail-library-label">
-                                    Статус перегляду:
-                                </label>
-                                <select
-                                    id="lib-status-select"
-                                    className="Detail-library-select"
-                                    value={libraryStatus}
-                                    onChange={(e) => setLibraryStatus(e.target.value)}
-                                    disabled={librarySaving}
-                                >
-                                    <option value="plan_to_watch">У планах</option>
-                                    <option value="watching">Дивлюсь</option>
-                                    <option value="completed">Переглянуто</option>
-                                    <option value="dropped">Покинуто</option>
-                                </select>
-                            </div>
-
-                            <div className="Detail-library-field">
-                                <label htmlFor="lib-episodes-input" className="Detail-library-label">
-                                    Переглянуто серій:
-                                </label>
-                                <div className="Detail-library-episodes-row">
-                                    <button
-                                        type="button"
-                                        className="Detail-episodes-step-btn"
-                                        onClick={handleStepDown}
-                                        disabled={librarySaving || episodesWatched <= 0}
-                                        title="Зменшити на 1"
-                                    >
-                                        −
-                                    </button>
-                                    <input
-                                        id="lib-episodes-input"
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        className="Detail-library-input episodes-input"
-                                        value={episodesInput}
-                                        onChange={handleEpisodesChange}
-                                        onBlur={handleEpisodesBlur}
-                                        onKeyDown={handleEpisodesKeyDown}
-                                        disabled={librarySaving}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="Detail-episodes-step-btn"
-                                        onClick={handleStepUp}
-                                        disabled={librarySaving || (totalEpisodes !== null && episodesWatched >= totalEpisodes)}
-                                        title="Збільшити на 1"
-                                    >
-                                        +
-                                    </button>
-                                    <span className="Detail-library-episodes-total">
-                                        / {totalEpisodes !== null ? `${totalEpisodes} сер.` : '?'}
-                                    </span>
-                                    {totalEpisodes !== null && (
-                                        <button
-                                            type="button"
-                                            className="Detail-library-all-btn"
-                                            title="Позначити всі серії переглянутими"
-                                            onClick={handleMarkAllEpisodes}
-                                            disabled={librarySaving || episodesWatched === totalEpisodes}
-                                        >
-                                            Всі
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="Detail-library-field">
-                                <label className="Detail-library-label">
-                                    Ваша оцінка: {libraryRating > 0 ? `(${libraryRating}/10)` : ''}
-                                </label>
-                                <RatingCounter
-                                    key={anime.id}
-                                    value={libraryRating}
-                                    onChange={handleRatingChange}
-                                    showSubmitButton={false}
-                                />
-                            </div>
-
-                            <div className="Detail-library-field">
-                                <label htmlFor="lib-notes-input" className="Detail-library-label">
-                                    Нотатки та враження:
-                                </label>
-                                <textarea
-                                    id="lib-notes-input"
-                                    rows="3"
-                                    className="Detail-library-textarea"
-                                    placeholder="Залиште коментар або нотатку..."
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    disabled={librarySaving}
-                                />
-                            </div>
-
-                            <div className="Detail-library-actions">
-                                <button
-                                    type="button"
-                                    className="Detail-library-save-btn"
-                                    onClick={handleSaveLibraryDetails}
-                                    disabled={librarySaving}
-                                >
-                                    {librarySaving ? 'Збереження...' : (inLibrary ? 'Зберегти зміни' : 'Додати в бібліотеку')}
-                                </button>
-
-                                {inLibrary && (
-                                    <button
-                                        type="button"
-                                        className="Detail-library-delete-btn"
-                                        onClick={handleDeleteFromLibrary}
-                                        disabled={librarySaving}
-                                        title="Видалити запис з локальної бази"
-                                    >
-                                        Видалити
-                                    </button>
-                                )}
-                            </div>
-
-                            {feedback && (
-                                <div className={`Detail-library-feedback ${feedback.isError ? 'error' : 'success'}`}>
-                                    {feedback.message}
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="Anime-detail-upcoming-notice">
-                            <span className="Upcoming-notice-icon">📢</span>
-                            <div className="Upcoming-notice-text">
-                                <strong>Тайтл в анонсі</strong>
-                                <p>Оцінювання та відлік переглянутих серій стануть доступними після прем'єри.</p>
-                            </div>
-                        </div>
-                    )}
+                    <AnimeLibraryPanel
+                        animeId={id}
+                        animeTitle={anime.title}
+                        totalEpisodesRaw={anime.episodes}
+                        isUpcoming={isUpcoming}
+                    />
                 </div>
 
                 <div className="Anime-detail-content">
@@ -521,9 +198,9 @@ export function AnimeDetailPage() {
                             <div className="Anime-detail-score-pill">
                                 ★ {anime.score ? `${anime.score} / 10` : 'Без оцінки'}
                             </div>
-                            {!isUpcoming && libraryRating > 0 && (
+                            {!isUpcoming && userRating > 0 && (
                                 <div className="Anime-detail-user-score-pill">
-                                    ★ Ваша оцінка: {libraryRating} / 10
+                                    ★ Ваша оцінка: {userRating} / 10
                                 </div>
                             )}
                         </div>
