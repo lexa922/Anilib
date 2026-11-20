@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useProfile, useRatings } from '../context/index.js';
 import { userLibraryService } from '../api/userLibraryService.js';
-import { useFetch, useFeedback } from '../hooks/index.js';
+import { useFetch, useFeedback, useBackNavigation } from '../hooks/index.js';
 import KpiCard from '../components/KpiCard.jsx';
 import './ProfilePage.css';
 
@@ -23,11 +23,11 @@ const STATUS_LABELS = {
 };
 
 export function ProfilePage() {
-    const navigate = useNavigate();
+    const handleBack = useBackNavigation('/');
     const { profile, updateProfile } = useProfile();
     const { resetRating } = useRatings();
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
-    // Profile form state with render-time sync
     const [prevProfile, setPrevProfile] = useState(profile);
     const [username, setUsername] = useState(profile.username || '');
     const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
@@ -45,10 +45,8 @@ export function ProfilePage() {
         }
     }
 
-    // Filter for personal library
     const [libraryFilter, setLibraryFilter] = useState('all');
 
-    // Fetch personal stats
     const fetchStats = useCallback((signal) => {
         return userLibraryService.getLibraryStats(signal);
     }, []);
@@ -59,7 +57,6 @@ export function ProfilePage() {
         refetch: refetchStats
     } = useFetch(fetchStats, []);
 
-    // Fetch personal library list
     const fetchLibrary = useCallback((signal) => {
         return userLibraryService.getLibrary(signal);
     }, []);
@@ -75,14 +72,6 @@ export function ProfilePage() {
         if (libraryFilter === 'all') return libraryItems;
         return libraryItems.filter((item) => item.status === libraryFilter);
     }, [libraryItems, libraryFilter]);
-
-    const handleBack = () => {
-        if (window.history.length > 1) {
-            navigate(-1);
-        } else {
-            navigate('/');
-        }
-    };
 
     const handleRetry = () => {
         refetchStats();
@@ -120,18 +109,22 @@ export function ProfilePage() {
     const handleDeleteItem = async (itemId, e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!window.confirm('Видалити цей тайтл з вашої бібліотеки?')) return;
+        if (confirmDeleteId !== itemId) {
+            setConfirmDeleteId(itemId);
+            return;
+        }
         try {
             await userLibraryService.deleteLibraryEntry(itemId);
+            setConfirmDeleteId(null);
             resetRating(itemId);
             refetchLibrary();
             refetchStats();
         } catch (err) {
-            alert(err.message || 'Помилка видалення');
+            setConfirmDeleteId(null);
+            showSaveFeedback(err.message || 'Помилка видалення з бібліотеки', true, false);
         }
     };
 
-    // 1. Full-page error state when server is unreachable or fails
     if (statsError || libraryError) {
         const errorDetails = statsError?.message || libraryError?.message || 'Не вдалося встановити зв\'язок із сервером.';
 
@@ -172,7 +165,6 @@ export function ProfilePage() {
         );
     }
 
-    // 2. Full-page skeleton loading state
     const isInitialLoading = (statsLoading || libraryLoading) && (!stats && !libraryItems);
 
     if (isInitialLoading) {
@@ -190,7 +182,6 @@ export function ProfilePage() {
                 </div>
 
                 <div className="Profile-skeleton-layout">
-                    {/* Left Column: Profile Card Skeleton */}
                     <div className="Profile-skeleton-user-card">
                         <div className="Skeleton-avatar-row">
                             <div className="Skeleton-avatar" />
@@ -228,8 +219,6 @@ export function ProfilePage() {
 
                         <div className="Skeleton-btn" />
                     </div>
-
-                    {/* Right Column: KPIs & Library Skeletons */}
                     <div className="Profile-skeleton-content">
                         <div className="Profile-skeleton-kpis-box">
                             <div className="Skeleton-line header-title" />
@@ -305,7 +294,6 @@ export function ProfilePage() {
             </div>
 
             <div className="Profile-layout">
-                {/* Left Column: User Profile Editor */}
                 <div className="Profile-user-card">
                     <div className="Profile-avatar-preview-wrap">
                         <img
@@ -419,9 +407,7 @@ export function ProfilePage() {
                     </form>
                 </div>
 
-                {/* Right Column: Personal Metrics & Saved Library */}
                 <div className="Profile-stats-content">
-                    {/* Personal Stats Section */}
                     <div className="Profile-kpis-box">
                         <div className="Profile-kpis-header">
                             <div>
@@ -449,7 +435,6 @@ export function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Saved Library Drilldown Section */}
                     <div className="Profile-library-box">
                         <div className="Profile-library-header">
                             <h3 className="Profile-library-title">
@@ -509,14 +494,38 @@ export function ProfilePage() {
                                             <Link to={`/anime/${item.id}`} className="Item-view-btn">
                                                 Деталі →
                                             </Link>
-                                            <button
-                                                type="button"
-                                                className="Item-delete-btn"
-                                                onClick={(e) => handleDeleteItem(item.id, e)}
-                                                title="Видалити з бібліотеки"
-                                            >
-                                                ✕
-                                            </button>
+                                            {confirmDeleteId === item.id ? (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="Item-delete-btn"
+                                                        onClick={(e) => handleDeleteItem(item.id, e)}
+                                                        title="Підтвердити видалення"
+                                                    >
+                                                        Підтвердити
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="Item-view-btn"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            setConfirmDeleteId(null);
+                                                        }}
+                                                    >
+                                                        Скасувати
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="Item-delete-btn"
+                                                    onClick={(e) => handleDeleteItem(item.id, e)}
+                                                    title="Видалити з бібліотеки"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}

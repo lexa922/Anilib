@@ -1,16 +1,17 @@
-import { useCallback, useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useCallback, useState, useMemo } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { animeApiClient } from '../services/index.js';
 import { userLibraryService } from '../api/userLibraryService.js';
-import { useFetch, useFeedback } from '../hooks/index.js';
+import { useFetch, useFeedback, useBackNavigation } from '../hooks/index.js';
+import { ANIME_STATUS_LABELS } from '../constants/filterConstants.js';
 import RatingCounter from '../components/RatingCounter.jsx';
 import { useRatings } from '../context/index.js';
 import './AnimeDetailPage.css';
 
 export function AnimeDetailPage() {
     const { id } = useParams();
-    const navigate = useNavigate();
-    const { getRating, setRating } = useRatings();
+    const handleBack = useBackNavigation('/');
+    const { getRating, setRating, resetRating } = useRatings();
 
     const [libraryStatus, setLibraryStatus] = useState('plan_to_watch');
     const [episodesWatched, setEpisodesWatched] = useState(0);
@@ -33,38 +34,33 @@ export function AnimeDetailPage() {
         return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
     }, [anime?.episodes]);
 
-    useEffect(() => {
-        let isMounted = true;
-        const controller = new AbortController();
+    const fetchLibraryEntry = useCallback((signal) => {
+        return userLibraryService.getLibraryEntry(id, signal);
+    }, [id]);
 
-        userLibraryService.getLibraryEntry(id, controller.signal)
-            .then((entry) => {
-                if (!isMounted) return;
-                if (entry) {
-                    setInLibrary(true);
-                    setLibraryStatus(entry.status || 'plan_to_watch');
-                    const ep = Math.max(0, parseInt(entry.episodes_watched, 10) || 0);
-                    setEpisodesWatched(ep);
-                    setEpisodesInput(String(ep));
-                    setNotes(entry.notes || '');
-                    const score = entry.user_score !== undefined && entry.user_score !== null ? Number(entry.user_score) : 0;
-                    setLibraryRating(score);
-                    setRating(id, score);
-                } else {
-                    setInLibrary(false);
-                    const currentRating = getRating(id);
-                    setLibraryRating(currentRating);
-                }
-            })
-            .catch(() => {
-                // Ignore gracefully if backend offline
-            });
+    const { data: libraryEntry, loading: libraryLoading } = useFetch(fetchLibraryEntry, [id]);
+    const [prevSyncedKey, setPrevSyncedKey] = useState(null);
+    const syncKey = libraryLoading ? null : `${id}:${libraryEntry?.updated_at ?? 'none'}`;
 
-        return () => {
-            isMounted = false;
-            controller.abort();
-        };
-    }, [id, setRating, getRating]);
+    if (syncKey && prevSyncedKey !== syncKey) {
+        setPrevSyncedKey(syncKey);
+        if (libraryEntry) {
+            setInLibrary(true);
+            setLibraryStatus(libraryEntry.status || 'plan_to_watch');
+            const ep = Math.max(0, parseInt(libraryEntry.episodes_watched, 10) || 0);
+            setEpisodesWatched(ep);
+            setEpisodesInput(String(ep));
+            setNotes(libraryEntry.notes || '');
+            const score = libraryEntry.user_score !== undefined && libraryEntry.user_score !== null
+                ? Number(libraryEntry.user_score)
+                : 0;
+            setLibraryRating(score);
+            setRating(id, score);
+        } else {
+            setInLibrary(false);
+            setLibraryRating(getRating(id));
+        }
+    }
 
     const handleRatingChange = (newVal) => {
         setLibraryRating(newVal);
@@ -173,20 +169,12 @@ export function AnimeDetailPage() {
             setEpisodesInput('0');
             setNotes('');
             setLibraryRating(0);
-            setRating(id, 0);
+            resetRating(id);
             showFeedback('Тайтл видалено з вашої бібліотеки');
         } catch (err) {
             showFeedback(err.message || 'Помилка видалення з бібліотеки', true);
         } finally {
             setLibrarySaving(false);
-        }
-    };
-
-    const handleBack = () => {
-        if (window.history.length > 1) {
-            navigate(-1);
-        } else {
-            navigate('/');
         }
     };
 
@@ -260,15 +248,9 @@ export function AnimeDetailPage() {
         );
     }
 
-    const statusMap = {
-        current: 'Онґоїнґ',
-        finished: 'Завершено',
-        upcoming: 'Анонс',
-        unreleased: 'Анонс'
-    };
     const normalizedStatus = (anime.status || '').toLowerCase().trim();
     const isUpcoming = normalizedStatus === 'upcoming' || normalizedStatus === 'unreleased' || normalizedStatus === 'анонс';
-    const statusText = statusMap[normalizedStatus] || anime.status || 'Невідомо';
+    const statusText = ANIME_STATUS_LABELS[normalizedStatus] || anime.status || 'Невідомо';
 
     const subtypeMap = {
         tv: 'TV Серіал',

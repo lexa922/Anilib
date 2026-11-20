@@ -8,6 +8,28 @@ const KITSU_HEADERS = {
     'Content-Type': 'application/vnd.api+json'
 };
 
+function waitWithSignal(ms, signal) {
+    return new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+            const err = new Error('Request was aborted');
+            err.name = 'AbortError';
+            reject(err);
+            return;
+        }
+        const timer = setTimeout(() => {
+            signal?.removeEventListener('abort', onAbort);
+            resolve();
+        }, ms);
+        function onAbort() {
+            clearTimeout(timer);
+            const err = new Error('Request was aborted');
+            err.name = 'AbortError';
+            reject(err);
+        }
+        signal?.addEventListener('abort', onAbort, { once: true });
+    });
+}
+
 export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') {
     async function fetchKitsuBatch({ filters, sortParam, offset, batchSize, signal }) {
         if (signal && signal.aborted) {
@@ -160,6 +182,95 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
 
         async getTopAnime(filters = {}, signal = null) {
             return this.getAnime({ ...filters, sort: '-averageRating' }, signal);
+        },
+
+        async streamAllAnimeStats({ onBatch, signal } = {}) {
+            const pageSize = 20;
+            const concurrency = 4;
+            const waveDelayMs = 100;
+
+            async function fetchStatsPage(offset) {
+                const params = new URLSearchParams({
+                    'fields[anime]': 'averageRating,status',
+                    'page[limit]': String(pageSize),
+                    'page[offset]': String(offset)
+                });
+                const response = await fetch(`${baseUrl}/anime?${params.toString()}`, {
+                    signal,
+                    headers: KITSU_HEADERS
+                });
+
+                if (response.status === 429) {
+                    return { rateLimited: true, items: [], totalCount: 0 };
+                }
+                if (!response.ok) {
+                    throw new Error(`Kitsu stats error: ${response.status} ${response.statusText}`);
+                }
+
+                const json = await response.json();
+                const items = (json.data || []).map((raw) => ({
+                    score: raw.attributes?.averageRating
+                        ? (parseFloat(raw.attributes.averageRating) / 10).toFixed(1)
+                        : null,
+                    status: raw.attributes?.status ?? ''
+                }));
+                const totalCount = json.meta?.count ?? items.length;
+                return { rateLimited: false, items, totalCount };
+            }
+
+            const firstPage = await fetchStatsPage(0);
+            if (firstPage.rateLimited) {
+                return { completed: false, totalCount: 0 };
+            }
+
+            const totalCount = firstPage.totalCount;
+            let processedCount = firstPage.items.length;
+            if (typeof onBatch === 'function') {
+                onBatch({ items: firstPage.items, processedCount, totalCount });
+            }
+
+            const offsets = [];
+            for (let offset = pageSize; offset < totalCount; offset += pageSize) {
+                offsets.push(offset);
+            }
+
+            for (let i = 0; i < offsets.length; i += concurrency) {
+                if (signal?.aborted) {
+                    const err = new Error('Request was aborted');
+                    err.name = 'AbortError';
+                    throw err;
+                }
+
+                const waveOffsets = offsets.slice(i, i + concurrency);
+                const waveResults = await Promise.all(waveOffsets.map(fetchStatsPage));
+
+                let hitRateLimit = false;
+                const waveItems = [];
+                for (const res of waveResults) {
+                    if (res.rateLimited) {
+                        hitRateLimit = true;
+                    } else if (res.items.length > 0) {
+                        waveItems.push(...res.items);
+                    }
+                }
+
+                if (waveItems.length > 0) {
+                    processedCount += waveItems.length;
+                    if (typeof onBatch === 'function') {
+                        onBatch({ items: waveItems, processedCount, totalCount });
+                    }
+                }
+
+                if (hitRateLimit) {
+                    return { completed: false, totalCount };
+                }
+
+                if (i + concurrency < offsets.length) {
+                    await waitWithSignal(waveDelayMs, signal);
+                }
+            }
+
+            return { completed: true, totalCount };
         },
 
         async getAnimeById(id, signal = null) {

@@ -1,17 +1,15 @@
-import { useMemo } from 'react';
+import { useState } from 'react';
 import CardSection from '../components/CardSection.jsx';
 import AnimeSection from '../components/AnimeSection.jsx';
 import DashboardSkeleton from '../components/DashboardSkeleton.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import ErrorDisplay from '../components/ErrorDisplay.jsx';
-import { useAnimeQuery } from '../hooks/index.js';
-import { calculateKpis } from '../utils/kpi.js';
+import { useAnimeQuery, useGlobalKpis } from '../hooks/index.js';
 import './DashboardPage.css';
 
 export function DashboardPage() {
     const {
         data: animeList,
-        globalAnimeList,
         loading,
         error,
         refetch,
@@ -27,11 +25,20 @@ export function DashboardPage() {
         pageSize
     } = useAnimeQuery();
 
-    const kpiData = useMemo(() => {
-        return calculateKpis(globalAnimeList);
-    }, [globalAnimeList]);
+    const {
+        kpiData,
+        processedCount,
+        totalCount,
+        isStreaming,
+        isComplete
+    } = useGlobalKpis();
 
-    const isInitialLoad = loading && animeList.length === 0 && globalAnimeList.length === 0;
+    const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+    if (!loading && !hasLoadedOnce) {
+        setHasLoadedOnce(true);
+    }
+
+    const isInitialLoad = loading && !hasLoadedOnce;
 
     return (
         <div className="Dashboard-page">
@@ -54,7 +61,10 @@ export function DashboardPage() {
                     <>
                         <CardSection
                             kpiData={kpiData}
-                            totalCount={globalAnimeList.length}
+                            processedCount={processedCount}
+                            totalCount={totalCount}
+                            isStreaming={isStreaming}
+                            isComplete={isComplete}
                         />
 
                         <AnimeSection

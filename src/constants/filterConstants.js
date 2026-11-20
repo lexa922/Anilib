@@ -13,3 +13,10 @@ export const STATUS_OPTIONS = [
     { value: 'finished', label: 'Завершено (Finished)' },
     { value: 'upcoming', label: 'Анонсовано (Upcoming)' }
 ];
+
+export const ANIME_STATUS_LABELS = {
+    current: 'Онґоїнґ',
+    finished: 'Завершено',
+    upcoming: 'Анонс',
+    unreleased: 'Анонс'
+};

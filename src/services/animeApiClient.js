@@ -100,6 +100,26 @@ export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy(
             return cacheResults(results);
         },
 
+        async streamAllAnimeStats({ onBatch, signal } = {}) {
+            if (!activeStrategy) {
+                throw new Error('No strategy configured on AnimeApiClient.');
+            }
+
+            if (typeof activeStrategy.streamAllAnimeStats === 'function') {
+                return activeStrategy.streamAllAnimeStats({ onBatch, signal });
+            }
+
+            const list = await this.getAnime({}, signal);
+            if (typeof onBatch === 'function') {
+                onBatch({
+                    items: list,
+                    processedCount: list.length,
+                    totalCount: list.length
+                });
+            }
+            return { completed: true, totalCount: list.length };
+        },
+
         async getAnimeById(id, signal = null) {
             if (!activeStrategy || !activeStrategy.getAnimeById) {
                 throw new Error('getAnimeById not supported by active strategy.');

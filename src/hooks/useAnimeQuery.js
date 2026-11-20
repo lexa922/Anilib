@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { animeApiClient } from '../services/index.js';
 import { useUrlParams } from './useUrlParams.js';
 import { useDebounce } from './useDebounce.js';
@@ -43,11 +43,6 @@ export function useAnimeQuery(initialOptions = {}) {
         fetchExecutor,
         [debouncedSearchQuery, filters, sort, currentPage, limit]
     );
-
-    const globalAnimeList = useMemo(() => {
-        const all = animeApiClient.getAllLoadedAnime();
-        return all.length > 0 ? all : (data || []);
-    }, [data]);
 
     useEffect(() => {
         updateUrlParams({
@@ -96,7 +91,6 @@ export function useAnimeQuery(initialOptions = {}) {
 
     return {
         data: data || [],
-        globalAnimeList,
         loading,
         error,
         refetch,

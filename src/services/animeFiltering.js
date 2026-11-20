@@ -28,13 +28,24 @@ export function parseFilterParams(params = {}) {
     };
 }
 
+function toKitsuCategorySlug(genre) {
+    return String(genre)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
 export function buildKitsuFilterQuery(filters, queryParams) {
     if (filters.textQuery) {
         queryParams.set('filter[text]', filters.textQuery);
     }
 
     if (filters.genres.length > 0) {
-        queryParams.set('filter[categories]', filters.genres.join(','));
+        const slugs = filters.genres.map(toKitsuCategorySlug).filter(Boolean);
+        if (slugs.length > 0) {
+            queryParams.set('filter[categories]', slugs.join(','));
+        }
     }
 
     if (filters.status) {
