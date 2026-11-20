@@ -61,7 +61,7 @@ export function filterLibraryByTimeframe(items = [], timeframe = 'all', now = Da
 
     const cutoffMs = now - option.days * 24 * 60 * 60 * 1000;
     return items.filter((item) => {
-        const date = parseSqliteTimestamp(item?.updated_at || item?.created_at);
+        const date = parseSqliteTimestamp(item?.created_at || item?.updated_at);
         return date ? date.getTime() >= cutoffMs : false;
     });
 }
@@ -129,7 +129,7 @@ export function buildStatusTimeline(items = [], timeframe = 'all') {
 
     const datedEntries = [];
     for (const item of items) {
-        const date = parseSqliteTimestamp(item?.updated_at || item?.created_at);
+        const date = parseSqliteTimestamp(item?.created_at || item?.updated_at);
         if (date) {
             datedEntries.push({ item, date });
         }

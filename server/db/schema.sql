@@ -10,9 +10,13 @@ CREATE TABLE IF NOT EXISTS user_library (
   poster TEXT DEFAULT '',
   subtype TEXT DEFAULT '',
   release_year INTEGER,
+  metadata_synced INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_user_library_status ON user_library(status);
+CREATE INDEX IF NOT EXISTS idx_user_library_updated_at ON user_library(updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS user_profile (
   id TEXT PRIMARY KEY,

@@ -37,7 +37,7 @@ function openCacheDb() {
     });
 }
 
-export async function readCatalogCache() {
+export async function readCatalogCache(expectedStrategy = 'kitsu') {
     const db = await openCacheDb();
     if (!db) return null;
 
@@ -63,11 +63,16 @@ export async function readCatalogCache() {
                     resolve(null);
                     return;
                 }
+                if (metaRecord.strategy && metaRecord.strategy !== expectedStrategy) {
+                    clearCatalogCache().finally(() => resolve(null));
+                    return;
+                }
                 if (Date.now() - (metaRecord.timestamp || 0) > CACHE_TTL_MS) {
                     resolve(null);
                     return;
                 }
                 resolve({
+                    strategy: metaRecord.strategy || expectedStrategy,
                     items,
                     totalCount: Number(metaRecord.totalCount) || 0,
                     nextOffset: Number(metaRecord.nextOffset) || 0,
@@ -111,6 +116,7 @@ export async function appendCatalogItems(batchItems = [], meta = {}) {
 
             metaStore.put(
                 {
+                    strategy: meta.strategy || 'kitsu',
                     totalCount: Number(meta.totalCount) || 0,
                     nextOffset: Number(meta.nextOffset) || 0,
                     isComplete: Boolean(meta.isComplete),

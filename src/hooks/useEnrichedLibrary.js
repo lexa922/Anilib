@@ -60,6 +60,7 @@ export function useEnrichedLibrary(libraryItems = []) {
 
         return libraryItems
             .filter((item) => {
+                if (item.metadata_synced) return false;
                 const key = String(item.id);
                 const hasDbGenres = Array.isArray(item.genres) && item.genres.length > 0;
                 const hasDbScore = parseScoreNum(item.kitsu_score) !== null;
@@ -115,7 +116,11 @@ export function useEnrichedLibrary(libraryItems = []) {
                                     release_year: anime?.year ?? null
                                 };
 
-                                userLibraryService.updateLibraryMetadata(animeId, meta, controller.signal).catch(() => {});
+                                try {
+                                    await userLibraryService.updateLibraryMetadata(animeId, meta, controller.signal);
+                                } catch {
+                                    // Non-fatal if metadata cache update fails
+                                }
                                 return [animeId, meta];
                             } catch (err) {
                                 if (err?.name === 'AbortError') {

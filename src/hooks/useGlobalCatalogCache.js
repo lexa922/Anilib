@@ -17,6 +17,7 @@ const PERSIST_BATCH_STEP = 500;
 let itemsById = new Map();
 const pendingPersistById = new Map();
 let accumulator = createKpiAccumulator();
+let currentStrategyName = null;
 let currentTotalCount = 0;
 let currentNextOffset = 0;
 let currentIsStreaming = false;
@@ -198,6 +199,7 @@ async function flushPendingPersist(isComplete) {
     pendingPersistById.clear();
 
     await appendCatalogItems(batch, {
+        strategy: animeApiClient.getStrategyName(),
         totalCount: currentTotalCount,
         nextOffset: currentNextOffset,
         isComplete
@@ -214,13 +216,21 @@ export function mergeCatalogItems(normalizedItems = []) {
 }
 
 function ensureCatalogInitialized() {
+    const activeStrategyName = animeApiClient.getStrategyName();
+
+    if (currentStrategyName && currentStrategyName !== activeStrategyName) {
+        refreshCatalogCache();
+        return;
+    }
+
     if (currentIsComplete || activeInitPromise) {
         return;
     }
 
+    currentStrategyName = activeStrategyName;
     activeInitPromise = (async () => {
         try {
-            const cached = await readCatalogCache();
+            const cached = await readCatalogCache(activeStrategyName);
             if (cached && Array.isArray(cached.items) && cached.items.length > 0) {
                 const preExisting = Array.from(itemsById.values());
                 itemsById = new Map();
@@ -323,6 +333,7 @@ export async function refreshCatalogCache() {
     itemsById = new Map();
     pendingPersistById.clear();
     accumulator = createKpiAccumulator();
+    currentStrategyName = animeApiClient.getStrategyName();
     currentTotalCount = 0;
     currentNextOffset = 0;
     currentIsStreaming = false;

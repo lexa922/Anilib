@@ -20,6 +20,10 @@ export function createAnimeApiClient(initialStrategy = createKitsuAnimeStrategy(
             return activeStrategy;
         },
 
+        getStrategyName() {
+            return activeStrategy?.name || 'custom';
+        },
+
         sortAnime(animeList, sort) {
             if (activeStrategy && typeof activeStrategy.sortAnime === 'function') {
                 return activeStrategy.sortAnime(animeList, sort);

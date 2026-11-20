@@ -74,7 +74,8 @@ function formatLibraryRow(row) {
         genres: normalizeGenresInput(row.genres),
         poster: row.poster || '',
         subtype: row.subtype || '',
-        release_year: row.release_year ?? null
+        release_year: row.release_year ?? null,
+        metadata_synced: Boolean(row.metadata_synced)
     };
 }
 
@@ -225,14 +226,18 @@ app.post('/api/library/:id', (req, res) => {
         ? parseKitsuScore(kitsu_score)
         : parseKitsuScore(existing?.kitsu_score);
 
+    const resolvedMetadataSynced = (genres !== undefined || kitsu_score !== undefined)
+        ? 1
+        : (existing?.metadata_synced ? 1 : 0);
+
     const stmt = db.prepare(`
         INSERT INTO user_library (
             id, title, user_score, status, episodes_watched, notes,
-            kitsu_score, genres, poster, subtype, release_year, created_at, updated_at
+            kitsu_score, genres, poster, subtype, release_year, metadata_synced, created_at, updated_at
         )
         VALUES (
             @id, @title, @user_score, @status, @episodes_watched, @notes,
-            @kitsu_score, @genres, @poster, @subtype, @release_year, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            @kitsu_score, @genres, @poster, @subtype, @release_year, @metadata_synced, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
         ON CONFLICT(id) DO UPDATE SET
             title = excluded.title,
@@ -245,6 +250,7 @@ app.post('/api/library/:id', (req, res) => {
             poster = excluded.poster,
             subtype = excluded.subtype,
             release_year = excluded.release_year,
+            metadata_synced = MAX(user_library.metadata_synced, excluded.metadata_synced),
             updated_at = CURRENT_TIMESTAMP
     `);
 
@@ -259,7 +265,8 @@ app.post('/api/library/:id', (req, res) => {
         genres: JSON.stringify(resolvedGenres),
         poster: resolvedPoster,
         subtype: resolvedSubtype,
-        release_year: resolvedYear
+        release_year: resolvedYear,
+        metadata_synced: resolvedMetadataSynced
     });
 
     const updated = db.prepare('SELECT * FROM user_library WHERE id = ?').get(id);
@@ -301,7 +308,8 @@ app.patch('/api/library/:id/metadata', (req, res) => {
             genres = @genres,
             poster = @poster,
             subtype = @subtype,
-            release_year = @release_year
+            release_year = @release_year,
+            metadata_synced = 1
         WHERE id = @id
     `).run({
         id,

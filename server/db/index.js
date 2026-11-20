@@ -42,7 +42,12 @@ if (!existingColumns.has('release_year')) {
 if (!existingColumns.has('created_at')) {
     db.exec('ALTER TABLE user_library ADD COLUMN created_at DATETIME');
 }
+if (!existingColumns.has('metadata_synced')) {
+    db.exec('ALTER TABLE user_library ADD COLUMN metadata_synced INTEGER DEFAULT 0');
+}
 
 db.exec('UPDATE user_library SET created_at = COALESCE(updated_at, CURRENT_TIMESTAMP) WHERE created_at IS NULL');
+db.exec('CREATE INDEX IF NOT EXISTS idx_user_library_status ON user_library(status)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_user_library_updated_at ON user_library(updated_at DESC)');
 
 export default db;

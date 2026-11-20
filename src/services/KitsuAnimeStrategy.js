@@ -121,6 +121,7 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
     }
 
     return {
+        name: 'kitsu',
         baseUrl,
 
         sortAnime(animeList, sort) {
