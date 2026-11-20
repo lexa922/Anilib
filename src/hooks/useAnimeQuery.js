@@ -3,7 +3,7 @@ import { animeApiClient } from '../services/index.js';
 import { parseUrlParams, useUrlParams } from './useUrlParams.js';
 import { useDebounce } from './useDebounce.js';
 import { useFetch } from './useFetch.js';
-import { mergeCatalogItems } from './useGlobalKpis.js';
+import { mergeCatalogItems } from './useGlobalCatalogCache.js';
 import { isValidYearString, validateYears } from '../constants/filterConstants.js';
 import {
     useDashboardStore,

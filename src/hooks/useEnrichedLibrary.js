@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { animeApiClient } from '../services/index.js';
 import { userLibraryService } from '../api/userLibraryService.js';
-import { useGlobalCatalogCache } from './useGlobalKpis.js';
+import { useGlobalCatalogCache } from './useGlobalCatalogCache.js';
 import { useDashboardStore, selectFavorites } from '../store/index.js';
 
 function parseScoreNum(val) {

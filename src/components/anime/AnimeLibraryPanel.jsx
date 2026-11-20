@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo } from 'react';
 import { userLibraryService } from '../../api/userLibraryService.js';
 import { useFetch, useFeedback } from '../../hooks/index.js';
-import { useRatings } from '../../context/index.js';
+import { useDashboardStore, selectUserRating } from '../../store/index.js';
 import { LIBRARY_STATUS_OPTIONS } from '../../constants/filterConstants.js';
 import RatingCounter from '../RatingCounter.jsx';
 import './AnimeLibraryPanel.css';
@@ -17,7 +17,9 @@ export function AnimeLibraryPanel({
     animeSubtype = '',
     animeYear = null
 }) {
-    const { getRating, setRating, resetRating } = useRatings();
+    const storedRating = useDashboardStore(selectUserRating(animeId));
+    const setRating = useDashboardStore((state) => state.setRating);
+    const resetRating = useDashboardStore((state) => state.resetRating);
 
     const [libraryStatus, setLibraryStatus] = useState('plan_to_watch');
     const [episodesWatched, setEpisodesWatched] = useState(0);
@@ -58,7 +60,7 @@ export function AnimeLibraryPanel({
             setRating(animeId, score);
         } else {
             setInLibrary(false);
-            setLibraryRating(getRating(animeId));
+            setLibraryRating(storedRating);
         }
     }
 

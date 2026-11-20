@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { userLibraryService } from '../../api/userLibraryService.js';
-import { useRatings } from '../../context/index.js';
+import { useDashboardStore } from '../../store/index.js';
 import { useFeedback } from '../../hooks/index.js';
 import { LIBRARY_STATUS_LABELS } from '../../constants/filterConstants.js';
 import './ProfileLibraryList.css';
 
 export function ProfileLibraryList({ libraryItems = [], onDeleted }) {
-    const { resetRating } = useRatings();
+    const resetRating = useDashboardStore((state) => state.resetRating);
     const [libraryFilter, setLibraryFilter] = useState('all');
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
     const [actionFeedback, showActionFeedback] = useFeedback();

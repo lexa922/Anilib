@@ -130,6 +130,8 @@ export function AnimeChart({
     series = null,
     leftAxis = null,
     rightAxis = null,
+    tooltipContent = null,
+    scatterTooltipContent = null,
     primaryKey = 'avgScore',
     secondaryKey = 'count',
     primaryLabel = 'Середній рейтинг',
@@ -225,7 +227,7 @@ export function AnimeChart({
                     tickLine={false}
                 />
             )}
-            <Tooltip content={<ChartTooltip seriesMeta={resolvedSeries} />} />
+            <Tooltip content={tooltipContent || <ChartTooltip seriesMeta={resolvedSeries} />} />
             <Legend wrapperStyle={{ fontSize: '0.84rem', paddingTop: '0.5rem' }} />
         </>
     );
@@ -262,6 +264,13 @@ export function AnimeChart({
                             name={scatterConfig.zName}
                         />
                     )}
+                    {scatterConfig.diagonalReference && (
+                        <ReferenceLine
+                            segment={[{ x: 0, y: 0 }, { x: 10, y: 10 }]}
+                            stroke="var(--text-muted)"
+                            strokeDasharray="4 4"
+                        />
+                    )}
                     {scatterConfig.refX > 0 && (
                         <ReferenceLine
                             x={scatterConfig.refX}
@@ -278,11 +287,11 @@ export function AnimeChart({
                     )}
                     <Tooltip
                         cursor={{ strokeDasharray: '3 3' }}
-                        content={<ScatterPointTooltip />}
+                        content={scatterTooltipContent || <ScatterPointTooltip />}
                     />
                     <Legend wrapperStyle={{ fontSize: '0.84rem', paddingTop: '0.5rem' }} />
                     <Scatter
-                        name={`${scatterConfig.yName} vs ${scatterConfig.xName}`}
+                        name={scatterConfig.seriesName || `${scatterConfig.yName} vs ${scatterConfig.xName}`}
                         data={scatterData}
                         fill="var(--accent-color)"
                         fillOpacity={0.82}
@@ -335,6 +344,7 @@ export function AnimeChart({
                         <Area
                             key={s.dataKey}
                             yAxisId={s.yAxisId || 'left'}
+                            stackId={s.stackId}
                             type="monotone"
                             dataKey={s.dataKey}
                             name={s.name}
@@ -371,11 +381,12 @@ export function AnimeChart({
                         <Bar
                             key={s.dataKey}
                             yAxisId={s.yAxisId || 'left'}
+                            stackId={s.stackId}
                             dataKey={s.dataKey}
                             name={s.name}
                             fill={s.color}
-                            radius={[6, 6, 0, 0]}
-                            maxBarSize={42}
+                            radius={s.stackId ? [0, 0, 0, 0] : [6, 6, 0, 0]}
+                            maxBarSize={s.maxBarSize ?? 42}
                         />
                     )
                 ))}

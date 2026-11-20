@@ -10,5 +10,7 @@ export {
     selectChartType,
     selectChartGroupBy,
     selectProfileChartType,
+    selectProfile,
+    selectUserRating,
     selectHasActiveFilters
 } from './useDashboardStore.js';

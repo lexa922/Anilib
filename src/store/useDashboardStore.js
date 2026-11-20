@@ -2,6 +2,41 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { INITIAL_FILTERS } from '../constants/filterConstants.js';
 import { DEFAULT_SORT } from '../constants/sortOptions.js';
+import { userLibraryService } from '../api/userLibraryService.js';
+
+const PROFILE_STORAGE_KEY = 'anilib_user_profile';
+const DEFAULT_PROFILE = {
+    username: 'Anime Fan',
+    avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=AniLib',
+    bio: 'Любитель аніме та якісної аналітики'
+};
+
+function readInitialProfile() {
+    try {
+        if (typeof localStorage !== 'undefined') {
+            const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
+            if (saved) {
+                return { ...DEFAULT_PROFILE, ...JSON.parse(saved) };
+            }
+        }
+    } catch {
+        // ignore storage errors
+    }
+    return DEFAULT_PROFILE;
+}
+
+function writeCachedProfile(profile) {
+    try {
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+        }
+    } catch {
+        // ignore storage errors
+    }
+}
+
+let ratingsLoadPromise = null;
+let profileLoadPromise = null;
 
 const VALID_CHART_TYPES = new Set(['bar', 'line', 'area', 'scatter']);
 const VALID_CHART_DIMENSIONS = new Set([
@@ -67,6 +102,8 @@ export const useDashboardStore = create(
             chartType: 'bar',
             chartGroupBy: 'hypeVsQuality',
             profileChartType: 'bar',
+            ratings: {},
+            profile: readInitialProfile(),
 
             toggleTheme: () => {
                 set((state) => {
@@ -205,6 +242,104 @@ export const useDashboardStore = create(
             setProfileChartType: (profileChartType) => {
                 if (!VALID_CHART_TYPES.has(profileChartType)) return;
                 set({ profileChartType });
+            },
+
+            setRating: (animeId, value) => {
+                if (!animeId) return;
+                const key = String(animeId);
+                set((state) => ({
+                    ratings: {
+                        ...state.ratings,
+                        [key]: Number(value)
+                    }
+                }));
+            },
+
+            resetRating: (animeId) => {
+                if (!animeId) return;
+                const key = String(animeId);
+                set((state) => {
+                    if (!Object.hasOwn(state.ratings, key)) return state;
+                    const next = { ...state.ratings };
+                    delete next[key];
+                    return { ratings: next };
+                });
+            },
+
+            syncRatingsFromLibrary: (items = []) => {
+                if (!Array.isArray(items)) return;
+                const nextRatings = {};
+                for (const item of items) {
+                    if (item && item.id && Number(item.user_score) > 0) {
+                        nextRatings[String(item.id)] = Number(item.user_score);
+                    }
+                }
+                set({ ratings: nextRatings });
+            },
+
+            loadRatings: async () => {
+                if (ratingsLoadPromise) return ratingsLoadPromise;
+                ratingsLoadPromise = userLibraryService.getLibrary()
+                    .then((items) => {
+                        if (Array.isArray(items)) {
+                            const map = {};
+                            items.forEach((item) => {
+                                if (item.user_score > 0) {
+                                    map[String(item.id)] = Number(item.user_score);
+                                }
+                            });
+                            set((state) => ({
+                                ratings: { ...map, ...state.ratings }
+                            }));
+                        }
+                    })
+                    .catch(() => {
+                        // Silently ignore if backend is offline
+                    });
+                return ratingsLoadPromise;
+            },
+
+            loadProfile: async () => {
+                if (profileLoadPromise) return profileLoadPromise;
+                profileLoadPromise = userLibraryService.getUserProfile()
+                    .then((data) => {
+                        if (data && data.username) {
+                            const merged = {
+                                username: data.username,
+                                avatar_url: data.avatar_url || DEFAULT_PROFILE.avatar_url,
+                                bio: data.bio ?? DEFAULT_PROFILE.bio
+                            };
+                            set({ profile: merged });
+                            writeCachedProfile(merged);
+                            return merged;
+                        }
+                        return null;
+                    })
+                    .catch(() => null);
+                return profileLoadPromise;
+            },
+
+            updateProfile: async (updates) => {
+                const saved = await userLibraryService.saveUserProfile(updates);
+                if (saved && saved.username) {
+                    const refreshed = {
+                        username: saved.username,
+                        avatar_url: saved.avatar_url || updates.avatar_url || DEFAULT_PROFILE.avatar_url,
+                        bio: saved.bio !== undefined && saved.bio !== null ? saved.bio : (updates.bio ?? DEFAULT_PROFILE.bio),
+                        updated_at: saved.updated_at
+                    };
+                    set({ profile: refreshed });
+                    writeCachedProfile(refreshed);
+                    return refreshed;
+                }
+
+                let fallback;
+                set((state) => {
+                    fallback = { ...state.profile, ...updates };
+                    return { profile: fallback };
+                });
+                writeCachedProfile(fallback);
+                return fallback;
             }
         }),
         {
@@ -243,6 +378,8 @@ export const selectIsFavorite = (id) => (state) => Boolean(id && state.favorites
 export const selectChartType = (state) => state.chartType;
 export const selectChartGroupBy = (state) => state.chartGroupBy;
 export const selectProfileChartType = (state) => state.profileChartType;
+export const selectProfile = (state) => state.profile;
+export const selectUserRating = (id) => (state) => (id ? (state.ratings[String(id)] || 0) : 0);
 export const selectHasActiveFilters = (state) => Boolean(
     state.filters.query.trim() ||
     state.filters.genres.length > 0 ||

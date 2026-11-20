@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { animeApiClient } from '../services/index.js';
 import { useFetch, useBackNavigation } from '../hooks/index.js';
 import { ANIME_STATUS_LABELS } from '../constants/filterConstants.js';
-import { useRatings } from '../context/index.js';
+import { useDashboardStore, selectUserRating } from '../store/index.js';
 import AnimeDetailSkeleton from '../components/anime/AnimeDetailSkeleton.jsx';
 import AnimeLibraryPanel from '../components/anime/AnimeLibraryPanel.jsx';
 import FavoriteButton from '../components/common/FavoriteButton.jsx';
@@ -21,7 +21,7 @@ const SUBTYPE_LABELS = {
 export function AnimeDetailPage() {
     const { id } = useParams();
     const handleBack = useBackNavigation('/');
-    const { getRating } = useRatings();
+    const userRating = useDashboardStore(selectUserRating(id));
 
     const fetchAnime = useCallback((signal) => {
         return animeApiClient.getAnimeById(id, signal);
@@ -76,7 +76,6 @@ export function AnimeDetailPage() {
     const isUpcoming = normalizedStatus === 'upcoming' || normalizedStatus === 'unreleased' || normalizedStatus === 'анонс';
     const statusText = ANIME_STATUS_LABELS[normalizedStatus] || anime.status || 'Невідомо';
     const subtypeText = SUBTYPE_LABELS[(anime.subtype || '').toLowerCase()] || anime.subtype || 'Серіал';
-    const userRating = getRating(id);
 
     return (
         <div className="Anime-detail-container">

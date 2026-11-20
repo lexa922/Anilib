@@ -1,8 +1,12 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Toggle from './components/Toggle';
-import { RatingProvider, ProfileProvider, useProfile } from './context/index.js';
-import { useDashboardStore, selectTheme, selectFavoritesCount } from './store/index.js';
+import {
+    useDashboardStore,
+    selectTheme,
+    selectFavoritesCount,
+    selectProfile
+} from './store/index.js';
 import "./App.css";
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
@@ -11,7 +15,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'));
 
 function AppHeader() {
-    const { profile } = useProfile();
+    const profile = useDashboardStore(selectProfile);
     const favoritesCount = useDashboardStore(selectFavoritesCount);
     const location = useLocation();
 
@@ -70,38 +74,41 @@ function AppHeader() {
 
 export function App() {
     const theme = useDashboardStore(selectTheme);
+    const loadProfile = useDashboardStore((state) => state.loadProfile);
+    const loadRatings = useDashboardStore((state) => state.loadRatings);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
     }, [theme]);
 
+    useEffect(() => {
+        loadProfile();
+        loadRatings();
+    }, [loadProfile, loadRatings]);
+
     return (
         <BrowserRouter>
             <div className={`app-theme-wrapper ${theme === 'dark' ? 'dark-theme' : 'light-theme'}`}>
-                <RatingProvider>
-                    <ProfileProvider>
-                        <div className="app-container">
-                            <AppHeader />
+                <div className="app-container">
+                    <AppHeader />
 
-                            <main className="app-main">
-                                <Suspense
-                                    fallback={
-                                        <div className="app-route-loading" role="status" aria-live="polite">
-                                            Завантаження сторінки...
-                                        </div>
-                                    }
-                                >
-                                    <Routes>
-                                        <Route path="/" element={<DashboardPage />} />
-                                        <Route path="/anime/:id" element={<AnimeDetailPage />} />
-                                        <Route path="/profile" element={<ProfilePage />} />
-                                        <Route path="*" element={<NotFoundPage />} />
-                                    </Routes>
-                                </Suspense>
-                            </main>
-                        </div>
-                    </ProfileProvider>
-                </RatingProvider>
+                    <main className="app-main">
+                        <Suspense
+                            fallback={
+                                <div className="app-route-loading" role="status" aria-live="polite">
+                                    Завантаження сторінки...
+                                </div>
+                            }
+                        >
+                            <Routes>
+                                <Route path="/" element={<DashboardPage />} />
+                                <Route path="/anime/:id" element={<AnimeDetailPage />} />
+                                <Route path="/profile" element={<ProfilePage />} />
+                                <Route path="*" element={<NotFoundPage />} />
+                            </Routes>
+                        </Suspense>
+                    </main>
+                </div>
             </div>
         </BrowserRouter>
     );

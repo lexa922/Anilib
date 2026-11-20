@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom';
-import { useRatings } from '../context/index.js';
+import { useDashboardStore, selectUserRating } from '../store/index.js';
 import { ANIME_STATUS_LABELS } from '../constants/filterConstants.js';
 import FavoriteButton from './common/FavoriteButton.jsx';
 import "./AnimeCard.css";
 
 function AnimeCard({ anime }) {
-    const { getRating } = useRatings();
-    const userRating = getRating(anime.id);
+    const userRating = useDashboardStore(selectUserRating(anime.id));
     const posterUrl = anime.poster || anime.images?.jpg?.image_url;
 
     const statusText = ANIME_STATUS_LABELS[(anime.status || '').toLowerCase()] || anime.status;
