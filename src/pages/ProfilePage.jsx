@@ -1,15 +1,22 @@
 import { useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { userLibraryService } from '../api/userLibraryService.js';
-import { useFetch, useBackNavigation } from '../hooks/index.js';
+import { useFetch, useBackNavigation, useEnrichedLibrary } from '../hooks/index.js';
+import { useDashboardStore, selectFavoritesCount } from '../store/index.js';
 import KpiCard from '../components/KpiCard.jsx';
 import ProfileSkeleton from '../components/profile/ProfileSkeleton.jsx';
 import ProfileEditorCard from '../components/profile/ProfileEditorCard.jsx';
+import ProfileAnalyticsSection from '../components/profile/ProfileAnalyticsSection.jsx';
 import ProfileLibraryList from '../components/profile/ProfileLibraryList.jsx';
+import ProfileFavoritesList from '../components/profile/ProfileFavoritesList.jsx';
 import './ProfilePage.css';
 
 export function ProfilePage() {
     const handleBack = useBackNavigation('/');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') === 'favorites' ? 'favorites' : 'library';
+
+    const favoritesCount = useDashboardStore(selectFavoritesCount);
 
     const fetchStats = useCallback((signal) => {
         return userLibraryService.getLibraryStats(signal);
@@ -31,9 +38,23 @@ export function ProfilePage() {
         refetch: refetchLibrary
     } = useFetch(fetchLibrary, []);
 
+    const { items: enrichedLibraryItems, isEnriching } = useEnrichedLibrary(libraryItems || []);
+
     const handleRetry = () => {
         refetchStats();
         refetchLibrary();
+    };
+
+    const handleSelectTab = (tabName) => {
+        setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            if (tabName === 'favorites') {
+                next.set('tab', 'favorites');
+            } else {
+                next.delete('tab');
+            }
+            return next;
+        }, { replace: true });
     };
 
     if (statsError || libraryError) {
@@ -105,6 +126,12 @@ export function ProfilePage() {
             title: 'Усього в бібліотеці',
             value: statsLoading ? '...' : (stats?.totalCount ?? 0),
             unit: ' тайтлів'
+        },
+        {
+            id: 'stat-favorites',
+            title: 'В обраному',
+            value: favoritesCount,
+            unit: ' тайтлів'
         }
     ];
 
@@ -152,10 +179,42 @@ export function ProfilePage() {
                         </div>
                     </div>
 
-                    <ProfileLibraryList
-                        libraryItems={libraryItems || []}
-                        onDeleted={handleRetry}
+                    <ProfileAnalyticsSection
+                        libraryItems={enrichedLibraryItems}
+                        isEnriching={isEnriching}
                     />
+
+                    <div className="Profile-collections-box">
+                        <div className="Profile-collections-tabs" role="tablist" aria-label="Колекції профілю">
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === 'library'}
+                                className={`Profile-collection-tab ${activeTab === 'library' ? 'active' : ''}`}
+                                onClick={() => handleSelectTab('library')}
+                            >
+                                📚 Моя бібліотека ({(libraryItems || []).length})
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === 'favorites'}
+                                className={`Profile-collection-tab fav-tab ${activeTab === 'favorites' ? 'active' : ''}`}
+                                onClick={() => handleSelectTab('favorites')}
+                            >
+                                ♥ Обрані тайтли ({favoritesCount})
+                            </button>
+                        </div>
+
+                        {activeTab === 'favorites' ? (
+                            <ProfileFavoritesList />
+                        ) : (
+                            <ProfileLibraryList
+                                libraryItems={enrichedLibraryItems}
+                                onDeleted={handleRetry}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

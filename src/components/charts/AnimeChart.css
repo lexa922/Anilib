@@ -1,0 +1,125 @@
+.Anime-chart-canvas {
+    width: 100%;
+    min-width: 0;
+    height: 320px;
+    transition: opacity 0.2s ease;
+}
+
+.Anime-chart-canvas.is-updating {
+    opacity: 0.6;
+}
+
+.Anime-chart-loading {
+    width: 100%;
+    height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.Anime-chart-skeleton {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--skeleton-base);
+}
+
+.Anime-chart-empty {
+    width: 100%;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    padding: 2rem 1rem;
+    text-align: center;
+    background-color: var(--bg-secondary);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+}
+
+.Anime-chart-empty-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.Anime-chart-empty-text {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    max-width: 420px;
+    line-height: 1.45;
+}
+
+.Anime-chart-tooltip {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    box-shadow: var(--shadow-md);
+    color: var(--text-primary);
+    font-size: 0.84rem;
+    min-width: 160px;
+}
+
+.Anime-chart-tooltip-label {
+    font-weight: 700;
+    color: var(--text-primary);
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.Anime-chart-tooltip-insight {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    background-color: var(--accent-light);
+    border: 1px solid var(--accent-border);
+    border-radius: 5px;
+    padding: 0.2rem 0.45rem;
+    margin-bottom: 0.4rem;
+}
+
+.Anime-chart-tooltip-meta {
+    margin-top: 0.2rem;
+    padding-top: 0.25rem;
+    border-top: 1px dashed var(--border-color);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.Anime-chart-tooltip-meta strong {
+    color: var(--text-primary);
+}
+
+.Anime-chart-tooltip-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.Anime-chart-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.Anime-chart-tooltip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.Anime-chart-tooltip-name {
+    color: var(--text-secondary);
+}
+
+.Anime-chart-tooltip-val {
+    margin-left: auto;
+    font-weight: 700;
+    color: var(--text-primary);
+}

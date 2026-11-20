@@ -23,12 +23,37 @@
     border-color: var(--accent-color);
 }
 
-.Anime-card-image {
+.Anime-card-poster-wrap {
+    position: relative;
     width: 100%;
     aspect-ratio: 2 / 3;
-    object-fit: cover;
     border-radius: 8px;
+    overflow: hidden;
     background-color: var(--bg-secondary);
+}
+
+.Anime-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.Anime-card-poster-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--text-muted);
+}
+
+.Anime-card-fav-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
 }
 
 .Anime-card-title {

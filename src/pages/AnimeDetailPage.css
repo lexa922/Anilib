@@ -232,7 +232,6 @@
     font-family: inherit;
 }
 
-/* Hide default browser up/down spinners on number inputs */
 .Detail-library-input[type="number"]::-webkit-outer-spin-button,
 .Detail-library-input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -471,6 +470,10 @@
     border-radius: 20px;
     font-size: 0.95rem;
     font-weight: 700;
+}
+
+.Anime-detail-fav-btn {
+    margin-left: auto;
 }
 
 .Anime-detail-title {

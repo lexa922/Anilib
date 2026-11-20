@@ -6,6 +6,7 @@ import { ANIME_STATUS_LABELS } from '../constants/filterConstants.js';
 import { useRatings } from '../context/index.js';
 import AnimeDetailSkeleton from '../components/anime/AnimeDetailSkeleton.jsx';
 import AnimeLibraryPanel from '../components/anime/AnimeLibraryPanel.jsx';
+import FavoriteButton from '../components/common/FavoriteButton.jsx';
 import './AnimeDetailPage.css';
 
 const SUBTYPE_LABELS = {
@@ -189,6 +190,11 @@ export function AnimeDetailPage() {
                         animeTitle={anime.title}
                         totalEpisodesRaw={anime.episodes}
                         isUpcoming={isUpcoming}
+                        animeScore={anime.score}
+                        animeGenres={anime.genres}
+                        animePoster={anime.poster}
+                        animeSubtype={anime.subtype}
+                        animeYear={anime.year}
                     />
                 </div>
 
@@ -203,6 +209,7 @@ export function AnimeDetailPage() {
                                     ★ Ваша оцінка: {userRating} / 10
                                 </div>
                             )}
+                            <FavoriteButton anime={anime} variant="button" className="Anime-detail-fav-btn" />
                         </div>
                         <h1 className="Anime-detail-title">{anime.title}</h1>
 

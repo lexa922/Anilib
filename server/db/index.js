@@ -20,4 +20,29 @@ const schemaPath = path.join(dbDir, 'schema.sql');
 const schema = fs.readFileSync(schemaPath, 'utf8');
 db.exec(schema);
 
+const existingColumns = new Set(
+    db.prepare('PRAGMA table_info(user_library)').all().map((col) => col.name)
+);
+
+if (!existingColumns.has('kitsu_score')) {
+    db.exec('ALTER TABLE user_library ADD COLUMN kitsu_score REAL');
+}
+if (!existingColumns.has('genres')) {
+    db.exec("ALTER TABLE user_library ADD COLUMN genres TEXT DEFAULT '[]'");
+}
+if (!existingColumns.has('poster')) {
+    db.exec("ALTER TABLE user_library ADD COLUMN poster TEXT DEFAULT ''");
+}
+if (!existingColumns.has('subtype')) {
+    db.exec("ALTER TABLE user_library ADD COLUMN subtype TEXT DEFAULT ''");
+}
+if (!existingColumns.has('release_year')) {
+    db.exec('ALTER TABLE user_library ADD COLUMN release_year INTEGER');
+}
+if (!existingColumns.has('created_at')) {
+    db.exec('ALTER TABLE user_library ADD COLUMN created_at DATETIME');
+}
+
+db.exec('UPDATE user_library SET created_at = COALESCE(updated_at, CURRENT_TIMESTAMP) WHERE created_at IS NULL');
+
 export default db;

@@ -1,11 +1,12 @@
 import './Toggle.css';
-import { useTheme } from '../context/index.js';
+import { useDashboardStore, selectTheme } from '../store/index.js';
 
 function Toggle({ isChecked, onToggle }) {
-    const themeContext = useTheme();
+    const theme = useDashboardStore(selectTheme);
+    const toggleTheme = useDashboardStore((state) => state.toggleTheme);
 
-    const checked = isChecked !== undefined ? isChecked : themeContext.isDark;
-    const handleToggle = onToggle || themeContext.toggleTheme;
+    const checked = isChecked !== undefined ? isChecked : theme === 'dark';
+    const handleToggle = onToggle || toggleTheme;
 
     return (
         <label className="toggle-wrapper" title={checked ? "Перемкнути на світлу тему" : "Перемкнути на темну тему"}>

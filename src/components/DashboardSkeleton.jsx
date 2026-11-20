@@ -10,6 +10,8 @@ function DashboardSkeleton({ pageSize = 12 }) {
                 <div className="kpi-card-skeleton skeleton-shimmer" />
             </div>
 
+            <div className="chart-section-skeleton skeleton-shimmer" />
+
             <div className="dashboard-main-skeleton">
                 <div className="anime-section-skeleton">
                     <div className="results-header-skeleton skeleton-shimmer" />

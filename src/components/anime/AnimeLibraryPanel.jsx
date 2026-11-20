@@ -6,7 +6,17 @@ import { LIBRARY_STATUS_OPTIONS } from '../../constants/filterConstants.js';
 import RatingCounter from '../RatingCounter.jsx';
 import './AnimeLibraryPanel.css';
 
-export function AnimeLibraryPanel({ animeId, animeTitle, totalEpisodesRaw, isUpcoming }) {
+export function AnimeLibraryPanel({
+    animeId,
+    animeTitle,
+    totalEpisodesRaw,
+    isUpcoming,
+    animeScore = null,
+    animeGenres = [],
+    animePoster = '',
+    animeSubtype = '',
+    animeYear = null
+}) {
     const { getRating, setRating, resetRating } = useRatings();
 
     const [libraryStatus, setLibraryStatus] = useState('plan_to_watch');
@@ -142,13 +152,28 @@ export function AnimeLibraryPanel({ animeId, animeTitle, totalEpisodesRaw, isUpc
         setEpisodesWatched(safeEpisodes);
         setEpisodesInput(String(safeEpisodes));
 
+        const normalizedGenres = Array.isArray(animeGenres)
+            ? animeGenres
+                .map((g) => (typeof g === 'string' ? g.trim() : String(g?.name || g?.title || '').trim()))
+                .filter(Boolean)
+            : [];
+
+        const parsedKitsuScore = animeScore != null && !Number.isNaN(Number(animeScore)) && Number(animeScore) > 0
+            ? Number(Number(animeScore).toFixed(2))
+            : null;
+
         try {
             await userLibraryService.saveLibraryEntry(animeId, {
                 title: animeTitle,
                 user_score: libraryRating,
                 status: libraryStatus,
                 episodes_watched: safeEpisodes,
-                notes
+                notes,
+                kitsu_score: parsedKitsuScore,
+                genres: normalizedGenres,
+                poster: animePoster || '',
+                subtype: animeSubtype || '',
+                release_year: animeYear ?? null
             });
             setRating(animeId, libraryRating);
             setInLibrary(true);

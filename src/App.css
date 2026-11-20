@@ -101,6 +101,23 @@
   border-color: var(--accent-border);
 }
 
+.app-nav-link.fav-nav-link {
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+}
+
+.app-nav-link.fav-nav-link .fav-nav-heart {
+  color: var(--favorite-color);
+}
+
+.app-nav-link.fav-nav-link:hover,
+.app-nav-link.fav-nav-link.active {
+  color: var(--favorite-color);
+  background-color: var(--favorite-light);
+  border-color: var(--favorite-color);
+}
+
 .app-nav-link.profile-link {
   padding: 0.3rem 0.75rem 0.3rem 0.4rem;
   border-radius: 20px;

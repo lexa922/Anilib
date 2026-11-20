@@ -6,21 +6,28 @@ import FilterPanel from './filters/FilterPanel.jsx';
 import { useMemo, useRef, useCallback } from "react";
 import { animeApiClient } from "../services/index.js";
 import { useFetch } from "../hooks/index.js";
+import {
+    useDashboardStore,
+    selectHasActiveFilters,
+    selectSort,
+    selectCurrentPage
+} from '../store/index.js';
 
 function AnimeSection({
     animeList = [],
-    currentPage = 1,
-    pageSize = 12,
-    onPageChange,
-    sort = '-averageRating',
-    onSortChange,
-    searchQuery = '',
-    onSearchChange,
-    filters = {},
-    onFiltersChange,
-    onResetFilters,
-    loading = false
+    loading = false,
+    pageSize = 12
 }) {
+    const searchQuery = useDashboardStore((state) => state.filters.query);
+    const hasActiveFilters = useDashboardStore(selectHasActiveFilters);
+    const sort = useDashboardStore(selectSort);
+    const currentPage = useDashboardStore(selectCurrentPage);
+
+    const setFilter = useDashboardStore((state) => state.setFilter);
+    const resetFilters = useDashboardStore((state) => state.resetFilters);
+    const setSort = useDashboardStore((state) => state.setSort);
+    const setCurrentPage = useDashboardStore((state) => state.setCurrentPage);
+
     const fetchCategories = useCallback((signal) => {
         return animeApiClient.getCategories(40, signal);
     }, []);
@@ -42,57 +49,62 @@ function AnimeSection({
         return Array.from(set).sort();
     }, [categoriesData, animeList]);
 
-    const isFiltered = Boolean(
-        (searchQuery && searchQuery.trim()) ||
-        (Array.isArray(filters.genres) && filters.genres.length > 0) ||
-        (filters.status && filters.status !== 'all') ||
-        filters.yearFrom ||
-        filters.yearTo
-    );
-
     const searchInputRef = useRef(null);
 
     const handleClearSearch = () => {
-        if (onSearchChange) {
-            onSearchChange('');
-        }
+        setFilter('query', '');
         if (searchInputRef.current) {
             searchInputRef.current.focus();
         }
     };
 
+    const handleSortChange = (nextSort) => {
+        setSort(nextSort);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handlePageChange = (nextPage) => {
+        if (nextPage < 1) return;
+        setCurrentPage(nextPage);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const isNextDisabled = loading || animeList.length < pageSize;
+
+    const countNoun = animeList.length === 1
+        ? 'тайтл'
+        : (animeList.length >= 2 && animeList.length <= 4 ? 'тайтли' : 'тайтлів');
+
     return (
         <div className="Anime-section">
             <div className="Anime-list-container">
                 <div className="Anime-results-header">
-                    {onSearchChange && (
-                        <div className="Anime-search-wrap">
-                            {loading ? (
-                                <span className="Anime-search-spinner" aria-hidden="true" />
-                            ) : (
-                                <span className="Anime-search-icon" aria-hidden="true">🔍</span>
-                            )}
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                className="Anime-search-input"
-                                placeholder="Пошук аніме за назвою..."
-                                value={searchQuery}
-                                onChange={(e) => onSearchChange(e.target.value)}
-                                aria-label="Пошук аніме за назвою"
-                            />
-                            {searchQuery && (
-                                <button
-                                    type="button"
-                                    className="Anime-search-clear"
-                                    onClick={handleClearSearch}
-                                    aria-label="Очистити пошук"
-                                >
-                                    ✕
-                                </button>
-                            )}
-                        </div>
-                    )}
+                    <div className="Anime-search-wrap">
+                        {loading ? (
+                            <span className="Anime-search-spinner" aria-hidden="true" />
+                        ) : (
+                            <span className="Anime-search-icon" aria-hidden="true">🔍</span>
+                        )}
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            className="Anime-search-input"
+                            placeholder="Пошук аніме за назвою..."
+                            value={searchQuery}
+                            onChange={(e) => setFilter('query', e.target.value)}
+                            aria-label="Пошук аніме за назвою"
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                className="Anime-search-clear"
+                                onClick={handleClearSearch}
+                                aria-label="Очистити пошук"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
 
                     <div className="Anime-results-meta">
                         <div className="Anime-results-info">
@@ -100,13 +112,16 @@ function AnimeSection({
                                 {loading ? (
                                     'Пошук тайтлів...'
                                 ) : (
-                                    <>Показано: <strong>{animeList.length}</strong> {animeList.length === 1 ? 'тайтл' : (animeList.length >= 2 && animeList.length <= 4 ? 'тайтли' : 'тайтлів')}</>
+                                    <>
+                                        Показано: <strong>{animeList.length}</strong> {countNoun}
+                                    </>
                                 )}
                             </span>
-                            {isFiltered && (
+                            {hasActiveFilters && (
                                 <button
+                                    type="button"
                                     className="Anime-reset-btn"
-                                    onClick={onResetFilters}
+                                    onClick={resetFilters}
                                     disabled={loading}
                                     title="Скинути всі активні фільтри та пошук"
                                 >
@@ -115,13 +130,11 @@ function AnimeSection({
                             )}
                         </div>
 
-                        {onSortChange && (
-                            <SortControl
-                                sort={sort}
-                                onSortChange={onSortChange}
-                                disabled={loading}
-                            />
-                        )}
+                        <SortControl
+                            sort={sort}
+                            onSortChange={handleSortChange}
+                            disabled={loading}
+                        />
                     </div>
                 </div>
 
@@ -135,45 +148,41 @@ function AnimeSection({
                         {animeList.length === 0 && (
                             <div className="Anime-empty-msg">
                                 <p>За вказаними фільтрами не знайдено жодного тайтла.</p>
-                                <button className="Anime-reset-btn" onClick={onResetFilters}>
-                                    Скинути фільтри
-                                </button>
+                                {hasActiveFilters && (
+                                    <button type="button" className="Anime-reset-btn" onClick={resetFilters}>
+                                        Скинути фільтри
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
                 )}
 
-                {onPageChange && (
-                    <div className="Pagination-controls">
-                        <button
-                            className="Pagination-btn"
-                            disabled={currentPage <= 1 || loading}
-                            onClick={() => onPageChange(currentPage - 1)}
-                        >
-                            ← Попередня
-                        </button>
-                        <span className="Pagination-info">
-                            Сторінка <strong>{currentPage}</strong> {loading && ' (Завантаження...)'}
-                        </span>
-                        <button
-                            className="Pagination-btn"
-                            disabled={loading || animeList.length < pageSize}
-                            onClick={() => onPageChange(currentPage + 1)}
-                        >
-                            Наступна (+{pageSize}) →
-                        </button>
-                    </div>
-                )}
+                <div className="Pagination-controls">
+                    <button
+                        type="button"
+                        className="Pagination-btn"
+                        disabled={currentPage <= 1 || loading}
+                        onClick={() => handlePageChange(currentPage - 1)}
+                    >
+                        ← Попередня
+                    </button>
+                    <span className="Pagination-info">
+                        Сторінка <strong>{currentPage}</strong> {loading && ' (Завантаження...)'}
+                    </span>
+                    <button
+                        type="button"
+                        className="Pagination-btn"
+                        disabled={isNextDisabled}
+                        onClick={() => handlePageChange(currentPage + 1)}
+                    >
+                        Наступна (+{pageSize}) →
+                    </button>
+                </div>
             </div>
 
             <FilterPanel
-                initialGenres={filters.genres || []}
-                initialStatus={filters.status || 'all'}
-                initialYearFrom={filters.yearFrom || ''}
-                initialYearTo={filters.yearTo || ''}
                 categories={allAvailableGenres}
-                onApply={onFiltersChange}
-                onReset={onResetFilters}
                 disabled={loading}
             />
         </div>

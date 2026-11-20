@@ -190,14 +190,16 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
             return this.getAnime({ ...filters, sort: '-averageRating' }, signal);
         },
 
-        async streamAllAnimeStats({ onBatch, signal } = {}) {
+        async streamAllAnimeStats({ onBatch, startOffset = 0, signal } = {}) {
             const pageSize = 20;
-            const concurrency = 4;
-            const waveDelayMs = 100;
+            const concurrency = 3;
+            const waveDelayMs = 150;
 
             async function fetchStatsPage(offset) {
                 const params = new URLSearchParams({
-                    'fields[anime]': 'averageRating,status',
+                    'fields[anime]': 'canonicalTitle,averageRating,status,subtype,startDate,userCount,favoritesCount,episodeCount,episodeLength,ageRating,categories',
+                    'fields[categories]': 'title',
+                    'include': 'categories',
                     'page[limit]': String(pageSize),
                     'page[offset]': String(offset)
                 });
@@ -207,36 +209,83 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
                 });
 
                 if (response.status === 429) {
-                    return { rateLimited: true, items: [], totalCount: 0 };
+                    return { offset, rateLimited: true, items: [], totalCount: 0 };
                 }
                 if (!response.ok) {
                     throw new Error(`Kitsu stats error: ${response.status} ${response.statusText}`);
                 }
 
                 const json = await response.json();
-                const items = (json.data || []).map((raw) => ({
-                    score: raw.attributes?.averageRating
-                        ? (parseFloat(raw.attributes.averageRating) / 10).toFixed(1)
-                        : null,
-                    status: raw.attributes?.status ?? ''
-                }));
-                const totalCount = json.meta?.count ?? items.length;
-                return { rateLimited: false, items, totalCount };
+
+                const categoryMap = new Map();
+                (json.included || []).forEach((inc) => {
+                    if (inc.type === 'categories' && inc.attributes?.title) {
+                        categoryMap.set(inc.id, inc.attributes.title);
+                    }
+                });
+
+                const items = (json.data || []).map((raw) => {
+                    const attrs = raw.attributes || {};
+                    let parsedYear = null;
+                    if (typeof attrs.startDate === 'string') {
+                        const match = attrs.startDate.match(/^(\d{4})/);
+                        if (match) {
+                            const yr = parseInt(match[1], 10);
+                            if (yr >= 1900 && yr <= 2100) {
+                                parsedYear = yr;
+                            }
+                        }
+                    }
+
+                    const genres = (raw.relationships?.categories?.data || [])
+                        .map((cat) => categoryMap.get(cat.id))
+                        .filter(Boolean);
+
+                    return {
+                        id: String(raw.id),
+                        title: attrs.canonicalTitle || '',
+                        score: attrs.averageRating
+                            ? Number((parseFloat(attrs.averageRating) / 10).toFixed(2))
+                            : null,
+                        status: attrs.status ?? '',
+                        subtype: attrs.subtype || '',
+                        startDate: attrs.startDate || null,
+                        year: parsedYear,
+                        userCount: attrs.userCount || 0,
+                        favoritesCount: attrs.favoritesCount || 0,
+                        episodes: attrs.episodeCount ?? null,
+                        episodeLength: attrs.episodeLength ?? null,
+                        ageRating: attrs.ageRating || '',
+                        genres
+                    };
+                });
+
+                const totalCount = json.meta?.count ?? (offset + items.length);
+                return { offset, rateLimited: false, items, totalCount };
             }
 
-            const firstPage = await fetchStatsPage(0);
+            const firstPage = await fetchStatsPage(startOffset);
             if (firstPage.rateLimited) {
-                return { completed: false, totalCount: 0 };
+                return { completed: false, rateLimited: true, totalCount: 0, nextOffset: startOffset };
             }
 
             const totalCount = firstPage.totalCount;
-            let processedCount = firstPage.items.length;
+            let currentNextOffset = Math.min(totalCount, startOffset + pageSize);
+
             if (typeof onBatch === 'function') {
-                onBatch({ items: firstPage.items, processedCount, totalCount });
+                onBatch({
+                    items: firstPage.items,
+                    totalCount,
+                    nextOffset: currentNextOffset
+                });
+            }
+
+            if (startOffset + pageSize >= totalCount) {
+                return { completed: true, rateLimited: false, totalCount, nextOffset: totalCount };
             }
 
             const offsets = [];
-            for (let offset = pageSize; offset < totalCount; offset += pageSize) {
+            for (let offset = startOffset + pageSize; offset < totalCount; offset += pageSize) {
                 offsets.push(offset);
             }
 
@@ -255,20 +304,29 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
                 for (const res of waveResults) {
                     if (res.rateLimited) {
                         hitRateLimit = true;
-                    } else if (res.items.length > 0) {
+                        break;
+                    }
+                    if (res.items.length > 0) {
                         waveItems.push(...res.items);
                     }
+                    currentNextOffset = Math.min(totalCount, res.offset + pageSize);
                 }
 
-                if (waveItems.length > 0) {
-                    processedCount += waveItems.length;
-                    if (typeof onBatch === 'function') {
-                        onBatch({ items: waveItems, processedCount, totalCount });
-                    }
+                if (waveItems.length > 0 && typeof onBatch === 'function') {
+                    onBatch({
+                        items: waveItems,
+                        totalCount,
+                        nextOffset: currentNextOffset
+                    });
                 }
 
                 if (hitRateLimit) {
-                    return { completed: false, totalCount };
+                    return {
+                        completed: false,
+                        rateLimited: true,
+                        totalCount,
+                        nextOffset: currentNextOffset
+                    };
                 }
 
                 if (i + concurrency < offsets.length) {
@@ -276,7 +334,12 @@ export function createKitsuAnimeStrategy(baseUrl = 'https://kitsu.io/api/edge') 
                 }
             }
 
-            return { completed: true, totalCount };
+            return {
+                completed: true,
+                rateLimited: false,
+                totalCount,
+                nextOffset: totalCount
+            };
         },
 
         async getAnimeById(id, signal = null) {

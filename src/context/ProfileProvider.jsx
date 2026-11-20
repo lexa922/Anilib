@@ -35,8 +35,8 @@ export function ProfileProvider({ children }) {
                     setProfile(merged);
                     try {
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-                    } catch {
-                        // ignore storage errors
+                    } catch (err) {
+                        void err;
                     }
                 }
             })
@@ -56,7 +56,6 @@ export function ProfileProvider({ children }) {
 
     const updateProfile = useCallback(async (updates) => {
         setError(null);
-        // Persist to backend
         const saved = await userLibraryService.saveUserProfile(updates);
         if (saved && saved.username) {
             const refreshed = {
@@ -68,8 +67,8 @@ export function ProfileProvider({ children }) {
             setProfile(refreshed);
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(refreshed));
-            } catch {
-                // ignore
+            } catch (err) {
+                void err;
             }
             return refreshed;
         }
@@ -78,8 +77,8 @@ export function ProfileProvider({ children }) {
         setProfile(fallback);
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
-        } catch {
-            // ignore
+        } catch (err) {
+            void err;
         }
         return fallback;
     }, [profile]);

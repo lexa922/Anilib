@@ -20,7 +20,6 @@ export function RatingProvider({ children }) {
                 }
             })
             .catch(() => {
-                // Silently ignore if server is unreachable
             });
 
         return () => {

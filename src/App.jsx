@@ -1,15 +1,20 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Toggle from './components/Toggle';
-import { ThemeProvider, RatingProvider, ProfileProvider, useProfile } from './context/index.js';
+import { RatingProvider, ProfileProvider, useProfile } from './context/index.js';
+import { useDashboardStore, selectTheme, selectFavoritesCount } from './store/index.js';
 import { DashboardPage, AnimeDetailPage, ProfilePage, NotFoundPage } from './pages/index.js';
 import "./App.css";
 
 function AppHeader() {
     const { profile } = useProfile();
+    const favoritesCount = useDashboardStore(selectFavoritesCount);
     const location = useLocation();
 
+    const searchParams = new URLSearchParams(location.search);
     const isCatalog = location.pathname === '/';
     const isProfile = location.pathname === '/profile';
+    const isFavoritesTab = isProfile && searchParams.get('tab') === 'favorites';
 
     return (
         <header className="app-header">
@@ -30,8 +35,16 @@ function AppHeader() {
                         Каталог
                     </Link>
                     <Link
+                        to="/profile?tab=favorites"
+                        className={`app-nav-link fav-nav-link ${isFavoritesTab ? 'active' : ''}`}
+                        title="Перейти до обраних тайтлів у профілі"
+                    >
+                        <span className="fav-nav-heart" aria-hidden="true">♥</span>
+                        <span>{favoritesCount}</span>
+                    </Link>
+                    <Link
                         to="/profile"
-                        className={`app-nav-link profile-link ${isProfile ? 'active' : ''}`}
+                        className={`app-nav-link profile-link ${isProfile && !isFavoritesTab ? 'active' : ''}`}
                     >
                         <img
                             src={profile.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=AniLib'}
@@ -52,9 +65,15 @@ function AppHeader() {
 }
 
 export function App() {
+    const theme = useDashboardStore(selectTheme);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+    }, [theme]);
+
     return (
         <BrowserRouter>
-            <ThemeProvider>
+            <div className={`app-theme-wrapper ${theme === 'dark' ? 'dark-theme' : 'light-theme'}`}>
                 <RatingProvider>
                     <ProfileProvider>
                         <div className="app-container">
@@ -71,7 +90,7 @@ export function App() {
                         </div>
                     </ProfileProvider>
                 </RatingProvider>
-            </ThemeProvider>
+            </div>
         </BrowserRouter>
     );
 }

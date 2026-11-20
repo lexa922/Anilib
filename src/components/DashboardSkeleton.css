@@ -24,6 +24,13 @@
     border: 1px solid var(--border-color);
 }
 
+.chart-section-skeleton {
+    width: 100%;
+    height: 360px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
 .dashboard-main-skeleton {
     display: flex;
     gap: 1.5rem;
